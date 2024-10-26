@@ -1,26 +1,15 @@
-use axum::routing::{get, post};
-use axum::Router;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use newslatter::configuration::get_configuration;
-use newslatter::routes::{health_check, subscribe};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use newslatter::{
+    app_state::AppStateInner,
+    routes::{health_check, subscribe},
+};
 use std::sync::Arc;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-
-pub struct AppStateInner {
-    pool: PgPool,
-}
-
-impl AppStateInner {
-    async fn new(connection_string: &str) -> Self {
-        let pool = PgPoolOptions::new()
-            .connect(connection_string)
-            .await
-            .expect("Failed to connect to the database!");
-
-        Self { pool }
-    }
-}
 
 pub fn app(state: Arc<AppStateInner>) -> Router {
     Router::new()
