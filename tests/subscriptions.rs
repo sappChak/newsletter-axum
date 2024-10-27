@@ -3,7 +3,9 @@ use axum::{
     http::{Request, StatusCode},
 };
 use http_body_util::BodyExt;
-use newslatter::{configuration::get_configuration, database::Database, routes::router::routes};
+use newslatter::configuration::configuration::get_configuration;
+use newslatter::database::database::Database;
+use newslatter::routes::router::routes;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
 
@@ -46,7 +48,7 @@ async fn subscribe_returs_400_for_data_is_missing() {
     let connection_string = configuration.database.connection_string();
 
     let state = Arc::new(Database::new(&connection_string).await.unwrap());
-    let routes = routes(state.clone());
+    let routes = routes(state);
 
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),

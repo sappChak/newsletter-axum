@@ -6,7 +6,7 @@ use sqlx::types::chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::database::Database;
+use crate::database::database::Database;
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -18,6 +18,10 @@ pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
+    if form.name.is_empty() || form.email.is_empty() {
+        return (StatusCode::BAD_REQUEST, "Missing name or email");
+    }
+
     let _ = sqlx::query!(
         r#"
           INSERT INTO subscriptions (id, email, name, subscribed_at)

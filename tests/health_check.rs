@@ -1,7 +1,8 @@
-use std::sync::Arc;
-
 use axum::{body::Body, extract::Request, http::StatusCode};
-use newslatter::{configuration::get_configuration, database::Database, routes::router::routes};
+use newslatter::configuration::configuration::get_configuration;
+use newslatter::database::database::Database;
+use newslatter::routes::router::routes;
+use std::sync::Arc;
 use tower::util::ServiceExt;
 
 #[tokio::test]
