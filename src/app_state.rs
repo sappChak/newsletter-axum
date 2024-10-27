@@ -1,16 +1,16 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
-pub struct AppStateInner {
-    pool: PgPool,
+pub struct Database {
+    pub pool: PgPool,
 }
 
-impl AppStateInner {
-    pub async fn new(connection_string: &str) -> Self {
+impl Database {
+    pub async fn new(connection_string: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let pool = PgPoolOptions::new()
             .connect(connection_string)
             .await
             .expect("Failed to connect to the database!");
 
-        Self { pool }
+        Ok(Self { pool })
     }
 }
