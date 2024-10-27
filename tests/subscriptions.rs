@@ -3,30 +3,21 @@ use axum::{
     http::{Request, StatusCode},
 };
 use http_body_util::BodyExt;
-use newslatter::configuration::get_configuration;
-use sqlx::{Connection, PgConnection};
+use newslatter::{configuration::get_configuration, database::Database, routes::router::routes};
+use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
 
 #[tokio::test]
 async fn subscribe_returs_200_for_valid_form_data() {
-    let app = app();
-
     let configuration = get_configuration().expect("Failed to read configuration");
-
     let connection_string = configuration.database.connection_string();
 
-    let mut connection = PgConnection::connect(&connection_string)
-        .await
-        .expect("Failed to connect to Postgres");
-
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
-        .fetch_one(&mut connection)
-        .await
-        .expect("Failed to fetch saved subscription.");
+    let state = Arc::new(Database::new(&connection_string).await.unwrap());
+    let routes = routes(state.clone());
 
     let form_data = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
-    let response = app
+    let response = routes
         .oneshot(
             Request::builder()
                 .method("POST")
@@ -39,11 +30,23 @@ async fn subscribe_returs_200_for_valid_form_data() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+        .fetch_one(&state.pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 #[tokio::test]
 async fn subscribe_returs_400_for_data_is_missing() {
-    let app = app();
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let connection_string = configuration.database.connection_string();
+
+    let state = Arc::new(Database::new(&connection_string).await.unwrap());
+    let routes = routes(state.clone());
 
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
@@ -52,7 +55,7 @@ async fn subscribe_returs_400_for_data_is_missing() {
     ];
 
     for (form_data, error_message) in test_cases {
-        let response = app
+        let response = routes
             .clone()
             .oneshot(
                 Request::builder()
