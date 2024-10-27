@@ -1,3 +1,4 @@
+use crate::db::database::Database;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Form};
@@ -5,8 +6,6 @@ use serde::Deserialize;
 use sqlx::types::chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
-
-use crate::database::database::Database;
 
 #[derive(Deserialize)]
 pub struct FormData {

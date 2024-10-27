@@ -1,3 +1,3 @@
 pub mod routes;
-pub mod configuration;
-pub mod database;
+pub mod config;
+pub mod db;

@@ -1,4 +1,4 @@
-use crate::database::database::Database;
+use crate::db::database::Database;
 use crate::routes::health_check;
 use crate::routes::subscribe;
 use axum::routing::get;
