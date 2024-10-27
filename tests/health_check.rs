@@ -1,9 +1,10 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
+use newslatter::startup::routes;
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn health_check_works() {
-    let app = app();
+    let app = routes();
 
     let response = app
         .oneshot(
