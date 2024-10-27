@@ -6,7 +6,7 @@ use sqlx::types::chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::app_state::Database;
+use crate::database::Database;
 
 #[derive(Deserialize)]
 pub struct FormData {

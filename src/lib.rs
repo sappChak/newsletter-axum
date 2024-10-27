@@ -1,3 +1,3 @@
-pub mod app_state;
+pub mod database;
 pub mod configuration;
 pub mod routes;

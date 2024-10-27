@@ -1,7 +1,7 @@
 use axum::routing::{get, post};
 use axum::{Extension, Router};
-use newslatter::app_state::Database;
 use newslatter::configuration::get_configuration;
+use newslatter::database::Database;
 use newslatter::routes::{health_check, subscribe};
 use std::sync::Arc;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
