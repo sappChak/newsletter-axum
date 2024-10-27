@@ -1,7 +1,7 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
 use newslatter::config::configuration::get_configuration;
 use newslatter::db::database::Database;
-use newslatter::routes::router::routes;
+use newslatter::routes::routes;
 use std::sync::Arc;
 use tower::util::ServiceExt;
 

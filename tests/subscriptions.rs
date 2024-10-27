@@ -5,7 +5,7 @@ use axum::{
 use http_body_util::BodyExt;
 use newslatter::config::configuration::get_configuration;
 use newslatter::db::database::Database;
-use newslatter::routes::router::routes;
+use newslatter::routes::routes;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
 
