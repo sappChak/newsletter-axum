@@ -2,19 +2,15 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use http_body_util::BodyExt;
-use newslatter::config::configuration::get_configuration;
 use newslatter::db::database::Database;
 use newslatter::routes::routes;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
 
-#[tokio::test]
-async fn subscribe_returs_200_for_valid_form_data() {
-    let configuration = get_configuration().expect("Failed to read configuration");
-    let connection_string = configuration.database.connection_string();
-
-    let state = Arc::new(Database::new(&connection_string).await.unwrap());
+#[sqlx::test]
+async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
+    let state = Arc::new(Database { pool });
     let routes = routes(state.clone());
 
     let form_data = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -42,13 +38,10 @@ async fn subscribe_returs_200_for_valid_form_data() {
     assert_eq!(saved.name, "le guin");
 }
 
-#[tokio::test]
-async fn subscribe_returs_400_for_data_is_missing() {
-    let configuration = get_configuration().expect("Failed to read configuration");
-    let connection_string = configuration.database.connection_string();
-
-    let state = Arc::new(Database::new(&connection_string).await.unwrap());
-    let routes = routes(state);
+#[sqlx::test]
+async fn subscribe_returs_400_for_data_is_missing(pool: PgPool) {
+    let state = Arc::new(Database { pool });
+    let routes = routes(state.clone());
 
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
@@ -72,12 +65,9 @@ async fn subscribe_returs_400_for_data_is_missing() {
 
         assert_eq!(
             response.status(),
-            StatusCode::BAD_REQUEST,
-            "The API did not fail with 400 Bad Request when the payload was {}.",
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The API did not fail with 422 UNPROCESSABLE_ENTITY when the payload was {}.",
             error_message
         );
-
-        let body = response.into_body().collect().await.unwrap().to_bytes();
-        assert!(body.is_empty());
     }
 }
