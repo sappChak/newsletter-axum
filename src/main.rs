@@ -1,18 +1,9 @@
-use axum::routing::{get, post};
-use axum::{Extension, Router};
 use newslatter::configuration::get_configuration;
 use newslatter::database::Database;
-use newslatter::routes::{health_check, subscribe};
+use newslatter::routes::router::routes;
 use std::sync::Arc;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-
-pub fn routes(state: Arc<Database>) -> Router {
-    Router::new()
-        .route("/health_check", get(health_check))
-        .route("/subscriptions", post(subscribe))
-        .layer(Extension(state))
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
