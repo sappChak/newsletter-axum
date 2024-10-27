@@ -20,5 +20,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 http-body-util = "0.1.0"
 hyper-util = { version = "0.1", features = ["client", "http1", "client-legacy"] }
-sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"] }
 config = "0.14"
+[dependencies.uuid]
+version = "1.11.0"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]
