@@ -17,11 +17,7 @@ pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
-    if form.name.is_empty() || form.email.is_empty() {
-        return (StatusCode::BAD_REQUEST, "Missing name or email");
-    }
-
-    let _ = sqlx::query!(
+    match sqlx::query!(
         r#"
           INSERT INTO subscriptions (id, email, name, subscribed_at)
           VALUES ($1, $2, $3, $4)
@@ -33,7 +29,14 @@ pub async fn subscribe(
     )
     .execute(&db.pool)
     .await
-    .unwrap();
-
-    (StatusCode::OK, "OK")
+    {
+        Ok(_) => {
+            tracing::info!("Subscriber was saved successfully");
+            StatusCode::OK
+        }
+        Err(e) => {
+            tracing::error!("Error executing SQL query: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
 }
