@@ -1,9 +1,10 @@
+use crate::router::routes;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
 use newslatter::db::database::Database;
-use newslatter::routes::routes;
+use newslatter::routes::router;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`

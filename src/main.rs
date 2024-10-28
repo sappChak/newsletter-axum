@@ -1,6 +1,6 @@
 use newslatter::config::configuration::get_configuration;
 use newslatter::db::database::Database;
-use newslatter::routes::routes;
+use newslatter::routes::router::routes;
 use std::sync::Arc;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -9,8 +9,13 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME")).into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                format!(
+                    "{}=debug,tower_http=debug,axum::rejection=trace",
+                    env!("CARGO_CRATE_NAME")
+                )
+                .into()
+            }),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

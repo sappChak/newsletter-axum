@@ -1,6 +1,6 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
 use newslatter::db::database::Database;
-use newslatter::routes::routes;
+use newslatter::routes::router::routes;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower::util::ServiceExt;
