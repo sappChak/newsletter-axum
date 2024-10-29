@@ -2,6 +2,7 @@ use newslatter::config::configuration::get_configuration;
 use newslatter::db::database::Database;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
+use secrecy::ExposeSecret;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -16,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_string = configuration.database.connection_string();
 
-    let state = Arc::new(Database::new(&connection_string).await?);
+    let state = Arc::new(Database::new(connection_string.expose_secret()).await?);
     let app = routes(state);
 
     let listener =
@@ -26,10 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("failed to bind to port {}", configuration.application_port);
                 std::process::exit(1);
             });
-
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
 
     axum::serve(listener, app).await.unwrap();
-
     Ok(())
 }
