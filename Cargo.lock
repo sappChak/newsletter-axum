@@ -1012,6 +1012,7 @@ dependencies = [
  "config",
  "http-body-util",
  "hyper-util",
+ "once_cell",
  "serde",
  "serde_json",
  "sqlx",
