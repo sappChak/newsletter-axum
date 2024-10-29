@@ -12,7 +12,7 @@ mod common;
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
     let app = spawn_test_app(pool).await;
 
-    let form_data = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let form_data = "name=Andrii%20Konotop&email=konotop401gmail.com";
 
     let response = app
         .router
@@ -34,8 +34,8 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
-    assert_eq!(saved.name, "le guin");
+    assert_eq!(saved.name, "Andrii Konotop");
+    assert_eq!(saved.email, "konotop401gmail.com");
 }
 
 #[sqlx::test]
