@@ -1,9 +1,7 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
+use newslatter::db::database::Database;
 use sqlx::PgPool;
 use tower::util::ServiceExt;
-
-use newslatter::db::database::Database;
-use newslatter::telemetry::{get_subscriber, init_subscriber};
 
 mod common;
 use common::spawn_test_app;
