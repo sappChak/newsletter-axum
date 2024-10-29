@@ -15,7 +15,8 @@ static TRACING: Lazy<()> = Lazy::new(|| {
         let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::stdout);
         init_subscriber(subscriber);
     } else {
-        let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::sink);
+        let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::sink); // Send
+                                                                                                 // all logs into void
         init_subscriber(subscriber);
     }
 });

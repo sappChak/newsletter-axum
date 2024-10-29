@@ -1,5 +1,5 @@
 use newslatter::config::configuration::get_configuration;
-use newslatter::db::database::Database;
+use newslatter::database::db::Database;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
 use secrecy::ExposeSecret;

@@ -1,4 +1,4 @@
-use crate::db::database::Database;
+use crate::database::db::Database;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Form};

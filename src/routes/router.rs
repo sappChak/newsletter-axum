@@ -12,7 +12,7 @@ use crate::routes::subscribe;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 
-use crate::db::database::Database;
+use crate::database::db::Database;
 
 pub fn routes(state: Arc<Database>) -> Router {
     Router::new()
