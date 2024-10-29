@@ -20,7 +20,7 @@ tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0.1"
 http-body-util = "0.1.0"
 hyper-util = { version = "0.1", features = ["client", "http1", "client-legacy"] }
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
 config = "0.14"
 uuid = {version = "1.11.0", features = ["v4", "fast-rng", "macro-diagnostics"]}
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
