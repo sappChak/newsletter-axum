@@ -3,7 +3,7 @@ use axum::{
     http::{Request, StatusCode},
 };
 use common::spawn_test_app;
-use newslatter::db::database::Database;
+use newslatter::database::db::Database;
 use sqlx::PgPool;
 use tower::util::ServiceExt;
 mod common;

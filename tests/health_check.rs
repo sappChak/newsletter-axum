@@ -1,5 +1,5 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
-use newslatter::db::database::Database;
+use newslatter::database::db::Database;
 use sqlx::PgPool;
 use tower::util::ServiceExt;
 
