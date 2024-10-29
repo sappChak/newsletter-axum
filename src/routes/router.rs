@@ -21,7 +21,7 @@ pub fn routes(state: Arc<Database>) -> Router {
         .layer(Extension(state))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
-                let request_id = uuid::Uuid::new_v4().to_string();
+                let request_id = uuid::Uuid::new_v4();
 
                 tracing::span!(
                     Level::DEBUG,
