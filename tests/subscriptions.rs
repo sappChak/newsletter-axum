@@ -3,20 +3,22 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use common::spawn_test_app;
 use newslatter::db::database::Database;
 use newslatter::routes::router;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
+mod common;
 
 #[sqlx::test]
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
-    let state = Arc::new(Database { pool });
-    let routes = routes(state.clone());
+    let app = spawn_test_app(pool).await;
 
     let form_data = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
-    let response = routes
+    let response = app
+        .router
         .oneshot(
             Request::builder()
                 .method("POST")
@@ -31,7 +33,7 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
     assert_eq!(response.status(), StatusCode::OK);
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
-        .fetch_one(&state.pool)
+        .fetch_one(&app.state.pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
@@ -41,8 +43,7 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
 
 #[sqlx::test]
 async fn subscribe_returs_400_for_data_is_missing(pool: PgPool) {
-    let state = Arc::new(Database { pool });
-    let routes = routes(state.clone());
+    let app = spawn_test_app(pool).await;
 
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
@@ -51,7 +52,8 @@ async fn subscribe_returs_400_for_data_is_missing(pool: PgPool) {
     ];
 
     for (form_data, error_message) in test_cases {
-        let response = routes
+        let response = app
+            .router
             .clone()
             .oneshot(
                 Request::builder()
