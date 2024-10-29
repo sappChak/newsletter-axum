@@ -6,7 +6,11 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscriber = get_subscriber("newslatter".to_string(), "info".to_string());
+    let subscriber = get_subscriber(
+        "newslatter".to_string(),
+        "info".to_string(),
+        std::io::stdout,
+    );
     init_subscriber(subscriber);
 
     let configuration = get_configuration().expect("Failed to read configuration.");

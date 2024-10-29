@@ -1,14 +1,11 @@
-use crate::router::routes;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
 use common::spawn_test_app;
 use newslatter::db::database::Database;
-use newslatter::routes::router;
 use sqlx::PgPool;
-use std::sync::Arc;
-use tower::ServiceExt; // for `call`, `oneshot`, and `ready`
+use tower::util::ServiceExt;
 mod common;
 
 #[sqlx::test]

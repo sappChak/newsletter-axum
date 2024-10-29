@@ -10,7 +10,10 @@ use sqlx::PgPool;
 use std::sync::Arc;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    let subscriber = get_subscriber("test".to_string(), "debug".to_string());
+    let default_span_name = "test".to_string();
+    let default_filter_level = "info".to_string();
+
+    let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::stdout);
     init_subscriber(subscriber);
 });
 
