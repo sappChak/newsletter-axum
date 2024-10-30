@@ -1,6 +1,8 @@
 use config::builder::DefaultState;
 use secrecy::{ExposeSecret, SecretString};
 
+use super::environment::Environment;
+
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -52,10 +54,21 @@ impl DatabaseSettings {
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let builder = config::ConfigBuilder::<DefaultState>::default();
+    let base_path = std::env::current_dir().expect("Failed to get current directory.");
+    let config_directory: std::path::PathBuf = base_path.join("configuration");
+
+    let builder = config::ConfigBuilder::<DefaultState>::default()
+        .add_source(config::File::from(config_directory.join("base")).required(true));
+
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "local".into())
+        .try_into()
+        .expect("Failed to read APP_ENVIRONMENT");
+
+    // TODO: create config file if one doesn't exist
 
     let config = builder
-        .add_source(config::File::with_name("configuration"))
+        .add_source(config::File::from(config_directory.join(environment.as_str())).required(true))
         .build()?;
 
     config.try_deserialize::<Settings>()
