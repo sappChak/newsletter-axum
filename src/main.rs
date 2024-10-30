@@ -2,7 +2,6 @@ use newslatter::configuration::config::get_configuration;
 use newslatter::database::db::Database;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
-use secrecy::ExposeSecret;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -15,9 +14,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_subscriber(subscriber);
 
     let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_string = configuration.database.connection_string();
+    let connection_options = configuration.database.with_db();
 
-    let state = Arc::new(Database::new(connection_string.expose_secret()).await?);
+    let state = Arc::new(Database::new(connection_options).await?);
     let app = routes(state);
 
     let listener = tokio::net::TcpListener::bind(format!(
