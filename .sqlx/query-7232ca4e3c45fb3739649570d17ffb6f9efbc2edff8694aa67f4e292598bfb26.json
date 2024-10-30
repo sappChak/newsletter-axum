@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS subscriptions(\n             id uuid NOT NULL,\n             PRIMARY KEY (id),\n             email TEXT NOT NULL UNIQUE,\n             name TEXT NOT NULL,\n             subscribed_at timestamptz NOT NULL);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "7232ca4e3c45fb3739649570d17ffb6f9efbc2edff8694aa67f4e292598bfb26"
+}
