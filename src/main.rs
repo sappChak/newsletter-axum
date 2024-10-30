@@ -1,4 +1,4 @@
-use newslatter::config::configuration::get_configuration;
+use newslatter::configuration::config::get_configuration;
 use newslatter::database::db::Database;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
@@ -20,13 +20,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(Database::new(connection_string.expose_secret()).await?);
     let app = routes(state);
 
-    let listener =
-        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", configuration.application_port))
-            .await
-            .unwrap_or_else(|_| {
-                eprintln!("failed to bind to port {}", configuration.application_port);
-                std::process::exit(1);
-            });
+    let listener = tokio::net::TcpListener::bind(format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    ))
+    .await
+    .unwrap_or_else(|_| {
+        eprintln!(
+            "failed to bind to address: {}:{}",
+            configuration.application.host, configuration.application.port
+        );
+        std::process::exit(1);
+    });
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
 
     axum::serve(listener, app).await.unwrap();
