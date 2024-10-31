@@ -1,5 +1,6 @@
 use config::builder::DefaultState;
 use secrecy::{ExposeSecret, SecretString};
+use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
 use super::environment::Environment;
@@ -14,6 +15,7 @@ pub struct Settings {
 pub struct DatabaseSettings {
     pub username: String,
     pub password: SecretString,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
     pub database_name: String,
@@ -23,15 +25,16 @@ pub struct DatabaseSettings {
 #[derive(serde::Deserialize)]
 pub struct ApplicationSettings {
     pub host: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
 }
 
 impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
+        // Try an encrypted connection, fallback to unencrypted if it fails
         let ssl_mode = if self.require_ssl {
             PgSslMode::Require
         } else {
-            // Try an encrypted connection, fallback to unencrypted if it fails
             PgSslMode::Prefer
         };
         PgConnectOptions::new()
@@ -61,6 +64,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     let config = builder
         .add_source(config::File::from(config_directory.join(environment.as_str())).required(true))
+        .add_source(config::Environment::with_prefix("app").separator("__"))
         .build()?;
 
     config.try_deserialize::<Settings>()
