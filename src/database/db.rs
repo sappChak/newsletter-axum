@@ -9,10 +9,7 @@ pub struct Database {
 
 impl Database {
     pub async fn new(options: PgConnectOptions) -> Result<Self, Box<dyn std::error::Error>> {
-        let pool = PgPoolOptions::new()
-            .connect_with(options)
-            .await
-            .expect("Failed to connect to the database!");
+        let pool = PgPoolOptions::new().connect_lazy_with(options);
 
         sqlx::migrate!("./migrations").run(&pool).await?;
 
