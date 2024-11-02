@@ -3,12 +3,15 @@ use secrecy::{ExposeSecret, SecretString};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
+use crate::{domain::SubscriberEmail, email_client::EmailClientOptions};
+
 use super::environment::Environment;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub email_client: EmailClientSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -29,6 +32,12 @@ pub struct ApplicationSettings {
     pub port: u16,
 }
 
+#[derive(serde::Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+}
+
 impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
         // Try an encrypted connection, fallback to unencrypted if it fails
@@ -47,6 +56,19 @@ impl DatabaseSettings {
 
     pub fn with_db(&self) -> PgConnectOptions {
         self.without_db().database(&self.database_name)
+    }
+}
+
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.base_url.clone())
+    }
+
+    pub fn options(&self) -> EmailClientOptions {
+        EmailClientOptions {
+            base_url: self.base_url.clone(),
+            sender: self.sender().expect("Invalid sender email address."),
+        }
     }
 }
 
