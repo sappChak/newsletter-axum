@@ -1,11 +1,15 @@
 use newslatter::configuration::config::get_configuration;
 use newslatter::database::db::Database;
+use newslatter::email_client::EmailClient;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let configuration = get_configuration().expect("Failed to read configuration.");
+
+    // TODO: add that info to ApplicationSettings
     let subscriber = get_subscriber(
         "newslatter".to_string(),
         "info".to_string(),
@@ -13,11 +17,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     init_subscriber(subscriber);
 
-    let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_options = configuration.database.with_db();
+    let db_state = Arc::new(Database::new(configuration.database.with_db()).await?);
+    let client_state = Arc::new(EmailClient::new(configuration.email_client.options()));
 
-    let state = Arc::new(Database::new(connection_options).await?);
-    let app = routes(state);
+    let app = routes(db_state, client_state);
 
     let listener = tokio::net::TcpListener::bind(format!(
         "{}:{}",
