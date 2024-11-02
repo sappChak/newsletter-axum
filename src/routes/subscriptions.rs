@@ -13,6 +13,17 @@ pub struct FormData {
     name: String,
 }
 
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+
+        Ok(Self { email, name })
+    }
+}
+
 #[tracing::instrument(
     name = "Adding a new subscriber",
     skip(db, form),
@@ -25,17 +36,10 @@ pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
-    let name = match SubscriberName::parse(form.name) {
-        Ok(name) => name,
+    let new_subscriber = match form.try_into() {
+        Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-
-    let email = match SubscriberEmail::parse(form.email) {
-        Ok(email) => email,
-        Err(_) => return StatusCode::BAD_REQUEST,
-    };
-
-    let new_subscriber = NewSubscriber { email, name };
 
     match insert_subscriber(db, &new_subscriber).await {
         Ok(_) => {
