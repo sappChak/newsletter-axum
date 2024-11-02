@@ -5,7 +5,7 @@ use sqlx::types::chrono::Utc;
 use std::sync::Arc;
 
 use crate::database::db::Database;
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -25,10 +25,18 @@ pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
-    let new_subscriber = NewSubscriber {
-        name: SubscriberName::parse(form.name),
-        email: form.email,
+    let name = match SubscriberName::parse(form.name) {
+        Ok(name) => name,
+        Err(_) => return StatusCode::BAD_REQUEST,
     };
+
+    let email = match SubscriberEmail::parse(form.email) {
+        Ok(email) => email,
+        Err(_) => return StatusCode::BAD_REQUEST,
+    };
+
+    let new_subscriber = NewSubscriber { email, name };
+
     match insert_subscriber(db, &new_subscriber).await {
         Ok(_) => {
             tracing::info!("New subscriber details have been saved");
@@ -52,7 +60,7 @@ pub async fn insert_subscriber(
           VALUES ($1, $2, $3, $4)
         "#,
         uuid::Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
