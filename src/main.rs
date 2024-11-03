@@ -17,10 +17,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     init_subscriber(subscriber);
 
-    let db_state = Arc::new(Database::new(configuration.database.with_db()).await?);
-    let client_state = Arc::new(EmailClient::new(configuration.email_client.options()));
+    let db = Arc::new(Database::new(configuration.database.with_db()).await?);
+    let client = Arc::new(EmailClient::new(configuration.email_client.options()));
 
-    let app = routes(db_state, client_state);
+    let app = routes(db, client);
 
     let listener = tokio::net::TcpListener::bind(format!(
         "{}:{}",

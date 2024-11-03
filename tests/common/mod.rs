@@ -1,5 +1,7 @@
 use crate::Database;
 use axum::Router;
+use newslatter::configuration::config::get_configuration;
+use newslatter::email_client::EmailClient;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::get_subscriber;
 use newslatter::telemetry::init_subscriber;
@@ -15,22 +17,26 @@ static TRACING: Lazy<()> = Lazy::new(|| {
         let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::stdout);
         init_subscriber(subscriber);
     } else {
-        let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::sink); // Send
-                                                                                                 // all logs into void
+        // Send all logs into void ----------------------------------------------------!
+        let subscriber = get_subscriber(default_span_name, default_filter_level, std::io::sink);
         init_subscriber(subscriber);
     }
 });
 
 pub struct TestApp {
-    pub state: Arc<Database>,
+    pub db_state: Arc<Database>,
     pub router: Router,
 }
 
 pub async fn spawn_test_app(pool: PgPool) -> TestApp {
     Lazy::force(&TRACING);
 
-    let state = Arc::new(Database { pool });
-    let router = routes(state.clone());
+    let configuration = get_configuration().expect("Failed to read configuration.");
 
-    TestApp { state, router }
+    let db_state = Arc::new(Database { pool });
+    let client_state = Arc::new(EmailClient::new(configuration.email_client.options()));
+
+    let router = routes(db_state.clone(), client_state.clone());
+
+    TestApp { db_state, router }
 }

@@ -30,7 +30,7 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
     assert_eq!(response.status(), StatusCode::OK);
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
-        .fetch_one(&app.state.pool)
+        .fetch_one(&app.db_state.pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
