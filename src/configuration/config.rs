@@ -61,7 +61,7 @@ impl DatabaseSettings {
 
 impl EmailClientSettings {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
-        SubscriberEmail::parse(self.base_url.clone())
+        SubscriberEmail::parse(self.sender_email.clone())
     }
 
     pub fn options(&self) -> EmailClientOptions {
