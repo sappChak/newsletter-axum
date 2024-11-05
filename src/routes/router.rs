@@ -1,21 +1,19 @@
+use crate::database::db::Database;
+use crate::email_client::SESWorkflow;
+use crate::routes::health_check;
+use crate::routes::subscribe;
+
 use axum::http::Request;
 use axum::routing::get;
 use axum::routing::post;
 use axum::Extension;
 use axum::Router;
-
-use std::sync::Arc;
-
-use crate::email_client::EmailClient;
-use crate::routes::health_check;
-use crate::routes::subscribe;
-
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 
-use crate::database::db::Database;
+use std::sync::Arc;
 
-pub fn routes(db: Arc<Database>, client: Arc<EmailClient>) -> Router {
+pub fn routes(db: Arc<Database>, client: Arc<SESWorkflow>) -> Router {
     Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))

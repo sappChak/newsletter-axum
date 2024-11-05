@@ -1,11 +1,10 @@
+use crate::database::db::Database;
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Form};
 use sqlx::types::chrono::Utc;
 use std::sync::Arc;
-
-use crate::database::db::Database;
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -40,7 +39,6 @@ pub async fn subscribe(
         Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-
     match insert_subscriber(db, &new_subscriber).await {
         Ok(_) => {
             tracing::info!("New subscriber details have been saved");

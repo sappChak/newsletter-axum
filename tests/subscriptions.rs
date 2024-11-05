@@ -10,7 +10,7 @@ use newslatter::database::db::Database;
 
 #[sqlx::test]
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
-    let app = spawn_test_app(pool).await;
+    let app = spawn_test_app(pool).await.unwrap();
 
     let form_data = "name=Andrii%20Konotop&email=konotop401@gmail.com";
 
@@ -40,7 +40,7 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
 
 #[sqlx::test]
 async fn subscribe_returs_422_for_data_is_missing(pool: PgPool) {
-    let app = spawn_test_app(pool).await;
+    let app = spawn_test_app(pool).await.unwrap();
 
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
@@ -74,7 +74,7 @@ async fn subscribe_returs_422_for_data_is_missing(pool: PgPool) {
 
 #[sqlx::test]
 async fn subscribe_returs_400_when_fields_are_present_but_invalid(pool: PgPool) {
-    let app = spawn_test_app(pool).await;
+    let app = spawn_test_app(pool).await.unwrap();
 
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),

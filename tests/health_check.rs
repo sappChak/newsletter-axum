@@ -8,7 +8,7 @@ use common::spawn_test_app;
 
 #[sqlx::test]
 async fn health_check_works(pool: PgPool) {
-    let app = spawn_test_app(pool).await;
+    let app = spawn_test_app(pool).await.unwrap();
 
     let response = app
         .router
