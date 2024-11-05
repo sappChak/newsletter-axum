@@ -1,15 +1,21 @@
+use newslatter::configuration::aws_credentials::StaticCredentials;
 use newslatter::configuration::config::get_configuration;
 use newslatter::database::db::Database;
-use newslatter::email_client::EmailClient;
+use newslatter::domain::SubscriberEmail;
+use newslatter::email_client::SESWorkflow;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::{get_subscriber, init_subscriber};
+
+use aws_config::Region;
+use aws_sdk_sesv2::config::SharedCredentialsProvider;
+use aws_sdk_sesv2::Client;
+
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration = get_configuration().expect("Failed to read configuration.");
 
-    // TODO: add that info to ApplicationSettings
     let subscriber = get_subscriber(
         "newslatter".to_string(),
         "info".to_string(),
@@ -17,10 +23,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     init_subscriber(subscriber);
 
-    let db = Arc::new(Database::new(configuration.database.with_db()).await?);
-    let client = Arc::new(EmailClient::new(configuration.email_client.options()));
+    let shared_config = aws_config::SdkConfig::builder()
+        .region(Region::new(configuration.aws.region))
+        .credentials_provider(SharedCredentialsProvider::new(StaticCredentials::new(
+            configuration.aws.access_key_id,
+            configuration.aws.secret_access_key,
+        )))
+        .build();
 
-    let app = routes(db, client);
+    let client = Client::new(&shared_config);
+    let aws_client = Arc::new(SESWorkflow::new(
+        client,
+        SubscriberEmail::parse("aws.test.sender@gmail.com".to_string())?,
+    ));
+
+    let db = Arc::new(Database::new(configuration.database.with_db()).await?);
+
+    let app = routes(db, aws_client);
 
     let listener = tokio::net::TcpListener::bind(format!(
         "{}:{}",

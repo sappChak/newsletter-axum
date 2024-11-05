@@ -1,17 +1,15 @@
+use super::environment::Environment;
+
 use config::builder::DefaultState;
 use secrecy::{ExposeSecret, SecretString};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
-use crate::{domain::SubscriberEmail, email_client::EmailClientOptions};
-
-use super::environment::Environment;
-
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
-    pub email_client: EmailClientSettings,
+    pub aws: AwsSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -32,10 +30,12 @@ pub struct ApplicationSettings {
     pub port: u16,
 }
 
-#[derive(serde::Deserialize)]
-pub struct EmailClientSettings {
-    pub base_url: String,
-    pub sender_email: String,
+#[derive(serde::Deserialize, Debug)]
+pub struct AwsSettings {
+    pub region: String,
+    pub verified_email: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
 }
 
 impl DatabaseSettings {
@@ -56,19 +56,6 @@ impl DatabaseSettings {
 
     pub fn with_db(&self) -> PgConnectOptions {
         self.without_db().database(&self.database_name)
-    }
-}
-
-impl EmailClientSettings {
-    pub fn sender(&self) -> Result<SubscriberEmail, String> {
-        SubscriberEmail::parse(self.sender_email.clone())
-    }
-
-    pub fn options(&self) -> EmailClientOptions {
-        EmailClientOptions {
-            base_url: self.base_url.clone(),
-            sender: self.sender().expect("Invalid sender email address."),
-        }
     }
 }
 
