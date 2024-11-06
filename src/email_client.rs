@@ -1,5 +1,3 @@
-use crate::domain::SubscriberEmail;
-
 use anyhow::anyhow;
 use aws_sdk_sesv2::types::Body;
 use aws_sdk_sesv2::types::Content;
@@ -8,17 +6,19 @@ use aws_sdk_sesv2::types::EmailContent;
 use aws_sdk_sesv2::types::Message;
 use aws_sdk_sesv2::Client;
 
+use crate::domain::SubscriberEmail;
+
 pub struct SESWorkflow {
-    client: Client,
+    aws_client: Client,
     // Sender
     verified_email: SubscriberEmail,
 }
 
 impl SESWorkflow {
-    pub fn new(client: Client, verified_email: SubscriberEmail) -> Self {
+    pub fn new(aws_client: Client, verified_email: String) -> Self {
         Self {
-            client,
-            verified_email,
+            aws_client,
+            verified_email: SubscriberEmail::parse(verified_email).expect("Bla bla bla"),
         }
     }
 
@@ -44,7 +44,7 @@ impl SESWorkflow {
             .build();
 
         let res = self
-            .client
+            .aws_client
             .send_email()
             .from_email_address(self.verified_email.as_ref())
             .destination(

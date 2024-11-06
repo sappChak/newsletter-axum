@@ -1,8 +1,3 @@
-use crate::database::db::Database;
-use crate::email_client::SESWorkflow;
-use crate::routes::health_check;
-use crate::routes::subscribe;
-
 use axum::http::Request;
 use axum::routing::get;
 use axum::routing::post;
@@ -12,6 +7,11 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 
 use std::sync::Arc;
+
+use crate::database::db::Database;
+use crate::email_client::SESWorkflow;
+use crate::routes::health_check;
+use crate::routes::subscribe;
 
 pub fn routes(db: Arc<Database>, client: Arc<SESWorkflow>) -> Router {
     Router::new()

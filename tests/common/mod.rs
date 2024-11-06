@@ -1,18 +1,15 @@
+use axum::Router;
+use newslatter::startup::configure_aws;
+use newslatter::startup::create_aws_client;
+use once_cell::sync::Lazy;
+use sqlx::PgPool;
+
 use crate::Database;
-use newslatter::configuration::aws_credentials::StaticCredentials;
 use newslatter::configuration::config::get_configuration;
-use newslatter::domain::SubscriberEmail;
 use newslatter::email_client::SESWorkflow;
 use newslatter::routes::router::routes;
 use newslatter::telemetry::get_subscriber;
 use newslatter::telemetry::init_subscriber;
-
-use aws_config::Region;
-use aws_sdk_sesv2::config::SharedCredentialsProvider;
-use aws_sdk_sesv2::Client;
-use axum::Router;
-use once_cell::sync::Lazy;
-use sqlx::PgPool;
 
 use std::sync::Arc;
 
@@ -40,23 +37,17 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error:
 
     let configuration = get_configuration().expect("Failed to read configuration.");
 
-    let shared_config = aws_config::SdkConfig::builder()
-        .region(Region::new(configuration.aws.region))
-        .credentials_provider(SharedCredentialsProvider::new(StaticCredentials::new(
-            configuration.aws.access_key_id,
-            configuration.aws.secret_access_key,
-        )))
-        .build();
+    let shared_config = configure_aws(&configuration)?;
+    let aws_client = create_aws_client(&shared_config)?;
 
     let db_state = Arc::new(Database { pool });
-    let client = Client::new(&shared_config);
 
-    let client_state = Arc::new(SESWorkflow::new(
-        client,
-        SubscriberEmail::parse("aws.test.sender@gmail.com".to_string())?,
+    let ses_state = Arc::new(SESWorkflow::new(
+        aws_client,
+        configuration.aws.verified_email.clone(),
     ));
 
-    let router = routes(db_state.clone(), client_state.clone());
+    let router = routes(db_state.clone(), ses_state.clone());
 
     Ok(TestApp { db_state, router })
 }

@@ -1,10 +1,12 @@
-use crate::database::db::Database;
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Form};
 use sqlx::types::chrono::Utc;
+
 use std::sync::Arc;
+
+use crate::database::db::Database;
+use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {

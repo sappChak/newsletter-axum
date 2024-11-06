@@ -1,14 +1,11 @@
-use newslatter::configuration::aws_credentials::StaticCredentials;
 use newslatter::configuration::config::get_configuration;
 use newslatter::database::db::Database;
-use newslatter::domain::SubscriberEmail;
 use newslatter::email_client::SESWorkflow;
 use newslatter::routes::router::routes;
-use newslatter::telemetry::{get_subscriber, init_subscriber};
-
-use aws_config::Region;
-use aws_sdk_sesv2::config::SharedCredentialsProvider;
-use aws_sdk_sesv2::Client;
+use newslatter::startup::configure_aws;
+use newslatter::startup::create_aws_client;
+use newslatter::startup::init_logging;
+use newslatter::startup::start_server;
 
 use std::sync::Arc;
 
@@ -16,45 +13,20 @@ use std::sync::Arc;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration = get_configuration().expect("Failed to read configuration.");
 
-    let subscriber = get_subscriber(
-        "newslatter".to_string(),
-        "info".to_string(),
-        std::io::stdout,
-    );
-    init_subscriber(subscriber);
+    init_logging(&configuration)?;
 
-    let shared_config = aws_config::SdkConfig::builder()
-        .region(Region::new(configuration.aws.region))
-        .credentials_provider(SharedCredentialsProvider::new(StaticCredentials::new(
-            configuration.aws.access_key_id,
-            configuration.aws.secret_access_key,
-        )))
-        .build();
+    let shared_config = configure_aws(&configuration)?;
+    let aws_client = create_aws_client(&shared_config)?;
 
-    let client = Client::new(&shared_config);
-    let aws_client = Arc::new(SESWorkflow::new(
-        client,
-        SubscriberEmail::parse("aws.test.sender@gmail.com".to_string())?,
+    let ses_state = Arc::new(SESWorkflow::new(
+        aws_client,
+        configuration.aws.verified_email.clone(),
     ));
+    let db_state = Arc::new(Database::new(configuration.database.with_db()).await?);
 
-    let db = Arc::new(Database::new(configuration.database.with_db()).await?);
+    let app = routes(db_state, ses_state);
 
-    let app = routes(db, aws_client);
+    start_server(&configuration, app).await?;
 
-    let listener = tokio::net::TcpListener::bind(format!(
-        "{}:{}",
-        configuration.application.host, configuration.application.port
-    ))
-    .await
-    .unwrap_or_else(|_| {
-        eprintln!(
-            "failed to bind to address: {}:{}",
-            configuration.application.host, configuration.application.port
-        );
-        std::process::exit(1);
-    });
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-
-    axum::serve(listener, app).await.unwrap();
     Ok(())
 }

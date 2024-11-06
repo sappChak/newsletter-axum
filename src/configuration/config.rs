@@ -6,14 +6,14 @@ use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
 #[derive(serde::Deserialize)]
-pub struct Settings {
-    pub database: DatabaseSettings,
-    pub application: ApplicationSettings,
-    pub aws: AwsSettings,
+pub struct Configuration {
+    pub database: DatabaseConfiguration,
+    pub application: ApplicationConfiguration,
+    pub aws: AwsConfiguration,
 }
 
 #[derive(serde::Deserialize)]
-pub struct DatabaseSettings {
+pub struct DatabaseConfiguration {
     pub username: String,
     pub password: SecretString,
     #[serde(deserialize_with = "deserialize_number_from_string")]
@@ -24,21 +24,23 @@ pub struct DatabaseSettings {
 }
 
 #[derive(serde::Deserialize)]
-pub struct ApplicationSettings {
+pub struct ApplicationConfiguration {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    pub logger_name: String,
+    pub default_env_filter: String,
 }
 
 #[derive(serde::Deserialize, Debug)]
-pub struct AwsSettings {
+pub struct AwsConfiguration {
     pub region: String,
     pub verified_email: String,
     pub access_key_id: String,
     pub secret_access_key: String,
 }
 
-impl DatabaseSettings {
+impl DatabaseConfiguration {
     pub fn without_db(&self) -> PgConnectOptions {
         // Try an encrypted connection, fallback to unencrypted if it fails
         let ssl_mode = if self.require_ssl {
@@ -59,7 +61,7 @@ impl DatabaseSettings {
     }
 }
 
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+pub fn get_configuration() -> Result<Configuration, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to get current directory.");
     let config_directory = base_path.join("configuration");
 
@@ -76,5 +78,5 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .add_source(config::Environment::with_prefix("app").separator("__"))
         .build()?;
 
-    config.try_deserialize::<Settings>()
+    config.try_deserialize::<Configuration>()
 }
