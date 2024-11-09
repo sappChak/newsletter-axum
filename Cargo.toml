@@ -1,5 +1,5 @@
 [package]
-name = "newslatter"
+name = "newsletter"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
-name = "newslatter"
+name = "newsletter"
 
 [dependencies]
 axum = "0.7"
@@ -33,9 +33,10 @@ unicode-segmentation = "1"
 validator = { version = "0.19"}
 # reqwest = {version = "0.12", default-features = false, features = ["json", "rustls-tls"]}
 aws-config = { version = "1.5.9", features = ["behavior-version-latest"] }
-aws-sdk-sesv2 = { version = "1.54.0", features = ["behavior-version-latest"] }
+aws-sdk-sesv2 = { version = "1.54.0", features = ["behavior-version-latest", "test-util"] }
 aws-credential-types = "1.2.1"
 aws-smithy-http = "0.60.7"
+aws-smithy-mocks-experimental = "0.2.1"
 anyhow = "1.0.92"
 
 [dev-dependencies]

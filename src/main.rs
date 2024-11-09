@@ -1,11 +1,11 @@
-use newslatter::configuration::config::get_configuration;
-use newslatter::database::db::Database;
-use newslatter::email_client::SESWorkflow;
-use newslatter::routes::router::routes;
-use newslatter::startup::configure_aws;
-use newslatter::startup::create_aws_client;
-use newslatter::startup::init_logging;
-use newslatter::startup::start_server;
+use newsletter::configuration::config::get_configuration;
+use newsletter::database::db::Database;
+use newsletter::email_client::SESWorkflow;
+use newsletter::routes::router::routes;
+use newsletter::startup::configure_aws;
+use newsletter::startup::create_aws_client;
+use newsletter::startup::init_logging;
+use newsletter::startup::start_server;
 
 use std::sync::Arc;
 

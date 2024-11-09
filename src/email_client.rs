@@ -10,8 +10,7 @@ use crate::domain::SubscriberEmail;
 
 pub struct SESWorkflow {
     aws_client: Client,
-    // Sender
-    verified_email: SubscriberEmail,
+    verified_email: SubscriberEmail, // <-- Sender
 }
 
 impl SESWorkflow {
@@ -72,38 +71,44 @@ impl SESWorkflow {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::email_client::SESOptions;
-//     use crate::{domain::SubscriberEmail, email_client::SESWorkflow};
-//
-//     use fake::faker::lorem::en::{Paragraph, Sentence};
-//     use fake::{faker::internet::en::SafeEmail, Fake};
-//     use wiremock::matchers::any;
-//     use wiremock::{Mock, MockServer, ResponseTemplate};
-//
-//     #[tokio::test]
-//     async fn send_email_fires_a_request_to_base_url() {
-//         let mock_server = MockServer::start().await;
-//         let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-//
-//         Mock::given(any())
-//             .respond_with(ResponseTemplate::new(200))
-//             .expect(1)
-//             .mount(&mock_server)
-//             .await;
-//
-//         let email_client = SESWorkflow::new(email_client_options);
-//
-//         let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-//         let subject: String = Sentence(1..2).fake();
-//         let html_content: String = Paragraph(1..10).fake();
-//         let text_content: String = Paragraph(1..10).fake();
-//
-//         let _ = email_client
-//             .send_email(recipient, &subject, &html_content, &text_content)
-//             .await;
-//
-//         mock_server.verify().await;
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
+    use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
+
+    use crate::email_client::SESWorkflow;
+
+    #[tokio::test]
+    async fn send_email_successes() -> Result<()> {
+        let mock_send_email = mock!(Client::send_email)
+            .match_requests(|req| {
+                req.destination()
+                    .unwrap()
+                    .to_addresses()
+                    .contains(&"user@example.com".into())
+            })
+            .then_output(|| {
+                SendEmailOutput::builder()
+                    .message_id("newsletter-email")
+                    .build()
+            });
+
+        let client = mock_client!(
+            aws_sdk_sesv2,
+            RuleMode::Sequential,
+            &[&mock_list_contacts, &mock_send_email,]
+        );
+
+        let mut workflow = SESWorkflow::new(client, "sender@example.com".to_string());
+
+        workflow.send_email().await?;
+
+        // let output = String::from_utf8(stdout)?;
+        // assert!(
+        //     output.contains("Newsletter sent to user@example.com with message ID newsletter-email")
+        // );
+
+        Ok(())
+    }
+}

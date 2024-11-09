@@ -21,8 +21,8 @@ FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/newslatter newslatter
+COPY --from=builder /app/target/release/newsletter newsletter
 COPY configuration configuration
 
 ENV APP_ENVIRONMENT=production
-ENTRYPOINT ["./newslatter"]
+ENTRYPOINT ["./newsletter"]

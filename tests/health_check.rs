@@ -1,10 +1,10 @@
 use axum::{body::Body, extract::Request, http::StatusCode};
-use newslatter::database::db::Database;
 use sqlx::PgPool;
 use tower::util::ServiceExt;
 
 mod common;
 use common::spawn_test_app;
+use newsletter::database::db::Database;
 
 #[sqlx::test]
 async fn health_check_works(pool: PgPool) {

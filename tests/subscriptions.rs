@@ -4,9 +4,10 @@ use axum::{
 };
 use sqlx::PgPool;
 use tower::util::ServiceExt;
+
 mod common;
 use common::spawn_test_app;
-use newslatter::database::db::Database;
+use newsletter::database::db::Database;
 
 #[sqlx::test]
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {

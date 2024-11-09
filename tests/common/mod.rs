@@ -1,15 +1,15 @@
 use axum::Router;
-use newslatter::startup::configure_aws;
-use newslatter::startup::create_aws_client;
+use newsletter::startup::configure_aws;
+use newsletter::startup::create_aws_client;
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
 
 use crate::Database;
-use newslatter::configuration::config::get_configuration;
-use newslatter::email_client::SESWorkflow;
-use newslatter::routes::router::routes;
-use newslatter::telemetry::get_subscriber;
-use newslatter::telemetry::init_subscriber;
+use newsletter::configuration::config::get_configuration;
+use newsletter::email_client::SESWorkflow;
+use newsletter::routes::router::routes;
+use newsletter::telemetry::get_subscriber;
+use newsletter::telemetry::init_subscriber;
 
 use std::sync::Arc;
 
@@ -41,7 +41,6 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error:
     let aws_client = create_aws_client(&shared_config)?;
 
     let db_state = Arc::new(Database { pool });
-
     let ses_state = Arc::new(SESWorkflow::new(
         aws_client,
         configuration.aws.verified_email.clone(),
