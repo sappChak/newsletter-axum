@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::database::db::Database;
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
+use crate::ses_workflow::SESWorkflow;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -27,7 +28,7 @@ impl TryFrom<FormData> for NewSubscriber {
 
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(db, form),
+    skip(db, ses_client, form),
     fields(
       subscriber_email = %form.email,
       subscriber_name= %form.name
@@ -35,6 +36,7 @@ impl TryFrom<FormData> for NewSubscriber {
 )]
 pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
+    Extension(ses_client): Extension<Arc<SESWorkflow>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
     let new_subscriber = match form.try_into() {
@@ -44,6 +46,16 @@ pub async fn subscribe(
     match insert_subscriber(db, &new_subscriber).await {
         Ok(_) => {
             tracing::info!("New subscriber details have been saved");
+            ses_client
+                .send_email(
+                    new_subscriber.email,
+                    "Welcome!",
+                    "Welcome to our newsletter!",
+                    "Welcome to our newsletter!",
+                )
+                .await
+                .expect("Failed to send welcome email");
+
             StatusCode::OK
         }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
