@@ -6,8 +6,8 @@ use sqlx::PgPool;
 
 use crate::Database;
 use newsletter::configuration::config::get_configuration;
-use newsletter::email_client::SESWorkflow;
 use newsletter::routes::router::routes;
+use newsletter::ses_workflow::SESWorkflow;
 use newsletter::telemetry::get_subscriber;
 use newsletter::telemetry::init_subscriber;
 

@@ -57,6 +57,7 @@ pub async fn start_server(
         );
         std::process::exit(1);
     });
+
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
 
     axum::serve(listener, app).await.unwrap();

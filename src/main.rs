@@ -1,7 +1,7 @@
 use newsletter::configuration::config::get_configuration;
 use newsletter::database::db::Database;
-use newsletter::email_client::SESWorkflow;
 use newsletter::routes::router::routes;
+use newsletter::ses_workflow::SESWorkflow;
 use newsletter::startup::configure_aws;
 use newsletter::startup::create_aws_client;
 use newsletter::startup::init_logging;

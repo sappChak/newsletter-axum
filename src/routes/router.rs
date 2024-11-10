@@ -9,9 +9,9 @@ use tracing::Level;
 use std::sync::Arc;
 
 use crate::database::db::Database;
-use crate::email_client::SESWorkflow;
 use crate::routes::health_check;
 use crate::routes::subscribe;
+use crate::ses_workflow::SESWorkflow;
 
 pub fn routes(db: Arc<Database>, client: Arc<SESWorkflow>) -> Router {
     Router::new()

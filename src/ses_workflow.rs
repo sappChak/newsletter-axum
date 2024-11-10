@@ -17,7 +17,7 @@ impl SESWorkflow {
     pub fn new(aws_client: Client, verified_email: String) -> Self {
         Self {
             aws_client,
-            verified_email: SubscriberEmail::parse(verified_email).expect("Bla bla bla"),
+            verified_email: SubscriberEmail::parse(verified_email).expect("Invalid sender email"),
         }
     }
 
@@ -77,7 +77,7 @@ mod tests {
     use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
     use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 
-    use crate::{domain::SubscriberEmail, email_client::SESWorkflow};
+    use crate::{domain::SubscriberEmail, ses_workflow::SESWorkflow};
 
     #[tokio::test]
     async fn send_email_successes() -> Result<()> {

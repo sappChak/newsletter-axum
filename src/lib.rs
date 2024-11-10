@@ -4,7 +4,7 @@ pub mod database;
 
 pub mod domain;
 
-pub mod email_client;
+pub mod ses_workflow;
 
 pub mod routes;
 
