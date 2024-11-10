@@ -77,7 +77,7 @@ mod tests {
     use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
     use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 
-    use crate::email_client::SESWorkflow;
+    use crate::{domain::SubscriberEmail, email_client::SESWorkflow};
 
     #[tokio::test]
     async fn send_email_successes() -> Result<()> {
@@ -86,7 +86,7 @@ mod tests {
                 req.destination()
                     .unwrap()
                     .to_addresses()
-                    .contains(&"user@example.com".into())
+                    .contains(&"recipient@example.com".into())
             })
             .then_output(|| {
                 SendEmailOutput::builder()
@@ -94,21 +94,22 @@ mod tests {
                     .build()
             });
 
-        let client = mock_client!(
-            aws_sdk_sesv2,
-            RuleMode::Sequential,
-            &[&mock_list_contacts, &mock_send_email,]
-        );
+        let client = mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email]);
 
-        let mut workflow = SESWorkflow::new(client, "sender@example.com".to_string());
+        let ses_workflow = SESWorkflow::new(client, "sender@example.com".to_string());
 
-        workflow.send_email().await?;
+        let recipient = SubscriberEmail::parse("recipient@example.com".to_string()).unwrap();
 
-        // let output = String::from_utf8(stdout)?;
-        // assert!(
-        //     output.contains("Newsletter sent to user@example.com with message ID newsletter-email")
-        // );
+        let result = ses_workflow
+            .send_email(
+                recipient,
+                "Test Subject",
+                "<p>Test HTML content</p>",
+                "Test text content",
+            )
+            .await;
 
+        assert!(result.is_ok());
         Ok(())
     }
 }
