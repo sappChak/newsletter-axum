@@ -1,3 +1,15 @@
+### Database setup and migrations:
+
+To initialize PostgreSQL and run migrations
+```sh
+./scripts/init_db.sh
+```
+
+If the elephant is already running
+```sh
+SKIP_DOCKER=true ./scripts/init_db.sh
+```
+
 ### Run
 
 ```sh
