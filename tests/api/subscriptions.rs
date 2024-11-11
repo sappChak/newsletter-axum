@@ -5,9 +5,7 @@ use axum::{
 use sqlx::PgPool;
 use tower::util::ServiceExt;
 
-mod common;
-use common::spawn_test_app;
-use newsletter::database::db::Database;
+use crate::helpers::spawn_test_app;
 
 #[sqlx::test]
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {

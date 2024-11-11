@@ -4,8 +4,8 @@ use newsletter::startup::create_aws_client;
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
 
-use crate::Database;
 use newsletter::configuration::config::get_configuration;
+use newsletter::database::db::Database;
 use newsletter::routes::router::routes;
 use newsletter::ses_workflow::SESWorkflow;
 use newsletter::telemetry::get_subscriber;
