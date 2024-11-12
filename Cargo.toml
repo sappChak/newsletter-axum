@@ -11,25 +11,25 @@ path = "src/main.rs"
 name = "newsletter"
 
 [dependencies]
-axum = "0.7"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde-aux = "4"
-tokio = { version = "1.41", features = ["full"] }
+axum = "0.7.7"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.132"
+serde-aux = "4.5.0"
+tokio = { version = "1.41.1", features = ["full"] }
 tower = "0.5.1"
-tower-http = { version = "0.6", features = ["trace"] }
-tracing = "0.1"
-http-body-util = "0.1.0"
-hyper-util = { version = "0.1", features = ["client", "http1", "client-legacy"] }
+tower-http = { version = "0.6.1", features = ["trace"] }
+tracing = "0.1.40"
+http-body-util = "0.1.2"
+hyper-util = { version = "0.1.10", features = ["client", "http1", "client-legacy"] }
 sqlx = { version = "0.8.2", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
-config = "0.14"
+config = "0.14.1"
 uuid = {version = "1.11.0", features = ["v4", "fast-rng", "macro-diagnostics"]}
-tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
-tracing-bunyan-formatter = "0.3"
-tracing-log = "0.2"
-once_cell = "1"
+tracing-subscriber = { version = "0.3.18", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3.9"
+tracing-log = "0.2.0"
+once_cell = "1.20.2"
 secrecy = { version = "0.10.3", features = ["serde"] }
-unicode-segmentation = "1"
+unicode-segmentation = "1.12.0"
 validator = { version = "0.19"}
 aws-config = { version = "1.5.9", features = ["behavior-version-latest"] }
 aws-sdk-sesv2 = { version = "1.54.0", features = ["behavior-version-latest", "test-util"] }
@@ -39,8 +39,8 @@ anyhow = "1.0.92"
 
 [dev-dependencies]
 claim = "0.5.0"
-fake = "3"
-quickcheck = "1"
-quickcheck_macros = "1"
+fake = "3.0.1"
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"
 rand = "0.8.5"
 aws-smithy-mocks-experimental = "0.2.1"
