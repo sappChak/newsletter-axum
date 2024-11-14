@@ -1,6 +1,9 @@
+use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
+use aws_sdk_sesv2::Client;
+use aws_smithy_mocks_experimental::mock;
+use aws_smithy_mocks_experimental::mock_client;
+use aws_smithy_mocks_experimental::RuleMode;
 use axum::Router;
-use newsletter::startup::configure_aws;
-use newsletter::startup::create_aws_client;
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
 
@@ -32,17 +35,27 @@ pub struct TestApp {
     pub router: Router,
 }
 
+pub async fn mock_aws_sesv2_client() -> Client {
+    let mock_send_email = mock!(Client::send_email).then_output(|| {
+        SendEmailOutput::builder()
+            .message_id("newsletter-email")
+            .build()
+    });
+    mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email])
+}
+
 pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error::Error>> {
     Lazy::force(&TRACING);
 
-    let configuration = get_configuration().expect("Failed to read configuration.");
-
-    let shared_config = configure_aws(&configuration)?;
-    let aws_client = create_aws_client(&shared_config)?;
+    let configuration = {
+        let mut c = get_configuration().expect("Failed to read configuration.");
+        c.aws.verified_email = "sender@example.com".to_string();
+        c
+    };
 
     let db_state = Arc::new(Database { pool });
     let ses_state = Arc::new(SESWorkflow::new(
-        aws_client,
+        mock_aws_sesv2_client().await,
         configuration.aws.verified_email.clone(),
     ));
 
