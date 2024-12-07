@@ -43,23 +43,17 @@ pub async fn subscribe(
         Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-    match insert_subscriber(db, &new_subscriber).await {
-        Ok(_) => {
-            tracing::info!("New subscriber details have been saved");
-            ses_client
-                .send_email(
-                    new_subscriber.email,
-                    "Welcome!",
-                    "Welcome to our newsletter!",
-                    "Welcome to our newsletter!",
-                )
-                .await
-                .expect("Failed to send welcome email");
-
-            StatusCode::OK
-        }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    if insert_subscriber(db, &new_subscriber).await.is_err() {
+        return StatusCode::INTERNAL_SERVER_ERROR;
     }
+    if send_confirmation_email(ses_client, new_subscriber.email)
+        .await
+        .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+
+    StatusCode::OK
 }
 
 #[tracing::instrument(
@@ -86,6 +80,34 @@ pub async fn insert_subscriber(
         tracing::error!("Failed to execute query: {:?}", e);
         e
     })?;
+
+    Ok(())
+}
+
+pub async fn send_confirmation_email(
+    ses_client: Arc<SESWorkflow>,
+    recipient_email: SubscriberEmail,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let confirmation_link = "https://something.com/confirm";
+    let text_content = format!(
+        "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
+        confirmation_link
+    );
+    let html_content = format!(
+        r#"
+        <html>
+            <body>
+                <h1>Welcome to our newsletter!</h1>
+                <p>Visit <a href="{}">{}</a> to confirm your subscription.</p>
+            </body>
+        </html>
+        "#,
+        confirmation_link, confirmation_link
+    );
+
+    ses_client
+        .send_email(recipient_email, "Welcome!", &text_content, &html_content)
+        .await?;
 
     Ok(())
 }
