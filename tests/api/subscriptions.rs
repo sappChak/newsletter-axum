@@ -27,14 +27,35 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+}
 
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+#[sqlx::test]
+async fn subscribe_persists_the_new_subscriber(pool: PgPool) {
+    let app = spawn_test_app(pool).await.unwrap();
+
+    let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
+
+    let _response = app
+        .router
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/subscriptions")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_data))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
         .fetch_one(&app.db_state.pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
     assert_eq!(saved.name, "Andrii Konotop");
     assert_eq!(saved.email, "aws.test.receiver@gmail.com");
+    assert_eq!(saved.status, "pending_confirmation");
 }
 
 #[sqlx::test]
