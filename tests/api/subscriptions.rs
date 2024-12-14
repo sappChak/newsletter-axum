@@ -49,7 +49,7 @@ async fn subscribe_persists_the_new_subscriber(pool: PgPool) {
         .unwrap();
 
     let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
-        .fetch_one(&app.db_state.pool)
+        .fetch_one(&app.db.pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
@@ -124,4 +124,29 @@ async fn subscribe_returs_400_when_fields_are_present_but_invalid(pool: PgPool) 
             error_message
         );
     }
+}
+
+#[sqlx::test]
+async fn subscribe_sends_a_confirmation_email_with_a_link(pool: PgPool) {
+    let app = spawn_test_app(pool).await.unwrap();
+
+    let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
+
+    let _response = app
+        .router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/subscriptions")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_data))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let confirmation_links = &app.get_confirmation_links();
+    dbg!(confirmation_links);
+    assert_eq!(confirmation_links.0, confirmation_links.1);
 }
