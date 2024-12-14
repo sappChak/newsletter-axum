@@ -15,6 +15,7 @@ use newsletter::telemetry::get_subscriber;
 use newsletter::telemetry::init_subscriber;
 
 use std::sync::Arc;
+use std::sync::Mutex;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_span_name = "test".to_string();
@@ -31,16 +32,76 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 });
 
 pub struct TestApp {
-    pub db_state: Arc<Database>,
+    pub db: Arc<Database>,
     pub router: Router,
+    pub captured_request_content: Arc<Mutex<Option<(String, String)>>>,
 }
 
-pub async fn mock_aws_sesv2_client() -> Client {
-    let mock_send_email = mock!(Client::send_email).then_output(|| {
-        SendEmailOutput::builder()
-            .message_id("newsletter-email")
-            .build()
-    });
+impl TestApp {
+    pub fn get_confirmation_links(&self) -> (String, String) {
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            links[0].as_str().to_owned()
+        };
+
+        let content = self
+            .captured_request_content
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap();
+
+        (get_link(&content.0), get_link(&content.1))
+    }
+}
+
+pub async fn mock_aws_sesv2_client(
+    captured_request_content: Arc<Mutex<Option<(String, String)>>>,
+) -> Client {
+    let mock_send_email = mock!(Client::send_email)
+        .match_requests(move |req| {
+            let destination = req.destination().unwrap();
+            let content = req.content().unwrap();
+
+            let matches_recipient = destination
+                .to_addresses()
+                .contains(&"aws.test.receiver@gmail.com".into());
+
+            if matches_recipient {
+                let html_body = content
+                    .simple()
+                    .unwrap()
+                    .body()
+                    .unwrap()
+                    .html()
+                    .unwrap()
+                    .data()
+                    .to_string();
+
+                let text_body = content
+                    .simple()
+                    .unwrap()
+                    .body()
+                    .unwrap()
+                    .text()
+                    .unwrap()
+                    .data()
+                    .to_string();
+
+                *captured_request_content.lock().unwrap() = Some((html_body, text_body));
+                true
+            } else {
+                false
+            }
+        })
+        .then_output(|| {
+            SendEmailOutput::builder()
+                .message_id("newsletter-email")
+                .build()
+        });
     mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email])
 }
 
@@ -53,13 +114,21 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error:
         c
     };
 
+    let captured_request_content = Arc::new(Mutex::new(None));
+
+    let aws_client = mock_aws_sesv2_client(captured_request_content.clone()).await;
+
     let db_state = Arc::new(Database { pool });
     let ses_state = Arc::new(SESWorkflow::new(
-        mock_aws_sesv2_client().await,
+        aws_client,
         configuration.aws.verified_email.clone(),
     ));
 
     let router = routes(db_state.clone(), ses_state.clone());
 
-    Ok(TestApp { db_state, router })
+    Ok(TestApp {
+        db: db_state,
+        router,
+        captured_request_content,
+    })
 }
