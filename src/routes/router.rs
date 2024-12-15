@@ -11,12 +11,14 @@ use std::sync::Arc;
 use crate::database::db::Database;
 use crate::routes::health_check;
 use crate::routes::subscribe;
+use crate::routes::subscriptions_confirm::confirm;
 use crate::ses_workflow::SESWorkflow;
 
 pub fn routes(db: Arc<Database>, client: Arc<SESWorkflow>) -> Router {
     Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
+        .route("/subscriptions/confirm", get(confirm))
         .layer(Extension(db))
         .layer(Extension(client))
         .layer(
