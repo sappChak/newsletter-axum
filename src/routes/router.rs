@@ -14,13 +14,14 @@ use crate::routes::subscribe;
 use crate::routes::subscriptions_confirm::confirm;
 use crate::ses_workflow::SESWorkflow;
 
-pub fn routes(db: Arc<Database>, client: Arc<SESWorkflow>) -> Router {
+pub fn router(db: Arc<Database>, client: Arc<SESWorkflow>, base_url: Arc<String>) -> Router {
     Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .layer(Extension(db))
         .layer(Extension(client))
+        .layer(Extension(base_url))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 let request_id = uuid::Uuid::new_v4();

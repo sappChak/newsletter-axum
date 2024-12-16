@@ -55,7 +55,7 @@ async fn the_link_returned_by_subscribe_returns_a_200_if_called(pool: PgPool) {
 
     let confiramation_link = Url::parse(raw_confirmation_link).unwrap();
 
-    assert_eq!(confiramation_link.host_str(), Some("localhost"));
+    assert_eq!(confiramation_link.host_str(), Some("127.0.0.1"));
     assert_eq!(confiramation_link.path(), "/subscriptions/confirm");
 
     // let response = reqwest::get(confiramation_link).await.unwrap();

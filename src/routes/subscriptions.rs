@@ -28,7 +28,7 @@ impl TryFrom<FormData> for NewSubscriber {
 
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(db, ses_client, form),
+    skip(db, ses_client, form, base_url),
     fields(
       subscriber_email = %form.email,
       subscriber_name= %form.name
@@ -37,6 +37,7 @@ impl TryFrom<FormData> for NewSubscriber {
 pub async fn subscribe(
     Extension(db): Extension<Arc<Database>>,
     Extension(ses_client): Extension<Arc<SESWorkflow>>,
+    Extension(base_url): Extension<Arc<String>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
     let new_subscriber = match form.try_into() {
@@ -46,7 +47,7 @@ pub async fn subscribe(
     if insert_subscriber(db, &new_subscriber).await.is_err() {
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
-    if send_confirmation_email(ses_client, new_subscriber.email)
+    if send_confirmation_email(ses_client, new_subscriber.email, base_url.to_string())
         .await
         .is_err()
     {
@@ -87,8 +88,10 @@ pub async fn insert_subscriber(
 pub async fn send_confirmation_email(
     ses_client: Arc<SESWorkflow>,
     recipient_email: SubscriberEmail,
+    base_url: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let confirmation_link = "https://something.com/confirm";
+    let confirmation_link = format!("{}/subscriptions/confirm", base_url);
+
     let text_content = format!(
         "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
         confirmation_link

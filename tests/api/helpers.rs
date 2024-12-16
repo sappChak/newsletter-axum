@@ -6,7 +6,7 @@ use sqlx::PgPool;
 
 use newsletter::configuration::config::get_configuration;
 use newsletter::database::db::Database;
-use newsletter::routes::router::routes;
+use newsletter::routes::router::router;
 use newsletter::ses_workflow::SESWorkflow;
 use newsletter::telemetry::get_subscriber;
 use newsletter::telemetry::init_subscriber;
@@ -125,16 +125,19 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error:
 
     let aws_client = mock_aws_sesv2_client(captured_request_content.clone()).await;
 
-    let db_state = Arc::new(Database { pool });
-    let ses_state = Arc::new(SESWorkflow::new(
+    let db = Arc::new(Database { pool });
+    let ses = Arc::new(SESWorkflow::new(
         aws_client,
         configuration.aws.verified_email.clone(),
     ));
+    let base_url = Arc::new(configuration.application.base_url.clone());
 
-    let router = routes(db_state.clone(), ses_state.clone());
+    tracing::info!("base_url {:?}", base_url);
+
+    let router = router(db.clone(), ses.clone(), base_url);
 
     Ok(TestApp {
-        db: db_state,
+        db,
         router,
         captured_request_content,
     })
