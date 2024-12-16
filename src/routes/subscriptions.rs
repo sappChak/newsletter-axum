@@ -90,7 +90,10 @@ pub async fn send_confirmation_email(
     recipient_email: SubscriberEmail,
     base_url: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let confirmation_link = format!("{}/subscriptions/confirm", base_url);
+    let confirmation_link = format!(
+        "{}/subscriptions/confirm?subscription_token=mytoken",
+        base_url
+    );
 
     let text_content = format!(
         "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
