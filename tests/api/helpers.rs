@@ -1,8 +1,5 @@
-use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
-use aws_sdk_sesv2::Client;
-use aws_smithy_mocks_experimental::mock;
-use aws_smithy_mocks_experimental::mock_client;
-use aws_smithy_mocks_experimental::RuleMode;
+use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
+use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 use axum::Router;
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
@@ -38,15 +35,7 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub fn get_confirmation_links(&self) -> (String, String) {
-        let get_link = |s: &str| {
-            let links: Vec<_> = linkify::LinkFinder::new()
-                .links(s)
-                .filter(|l| *l.kind() == linkify::LinkKind::Url)
-                .collect();
-            links[0].as_str().to_owned()
-        };
-
+    pub fn get_confirmation_link(&self) -> String {
         let content = self
             .captured_request_content
             .lock()
@@ -54,8 +43,26 @@ impl TestApp {
             .clone()
             .unwrap();
 
-        (get_link(&content.0), get_link(&content.1))
+        extract_link(&content.0)
     }
+    pub fn get_confirmation_links(&self) -> (String, String) {
+        let content = self
+            .captured_request_content
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap();
+
+        (extract_link(&content.0), extract_link(&content.1))
+    }
+}
+
+pub fn extract_link(s: &str) -> String {
+    let links: Vec<_> = linkify::LinkFinder::new()
+        .links(s)
+        .filter(|l| *l.kind() == linkify::LinkKind::Url)
+        .collect();
+    links[0].as_str().to_owned()
 }
 
 pub async fn mock_aws_sesv2_client(
