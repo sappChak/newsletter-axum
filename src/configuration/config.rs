@@ -28,6 +28,7 @@ pub struct ApplicationConfiguration {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    pub base_url: String,
     pub logger_name: String,
     pub default_env_filter: String,
 }
