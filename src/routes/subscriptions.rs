@@ -1,13 +1,15 @@
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::{Extension, Form};
-use sqlx::types::chrono::Utc;
-
 use std::sync::Arc;
 
-use crate::database::db::Database;
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
-use crate::ses_workflow::SESWorkflow;
+use axum::{http::StatusCode, response::IntoResponse, Extension, Form};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use sqlx::types::chrono::Utc;
+use uuid::Uuid;
+
+use crate::{
+    database::db::Database,
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    ses_workflow::SESWorkflow,
+};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -21,9 +23,16 @@ impl TryFrom<FormData> for NewSubscriber {
     fn try_from(value: FormData) -> Result<Self, Self::Error> {
         let name = SubscriberName::parse(value.name)?;
         let email = SubscriberEmail::parse(value.email)?;
-
         Ok(Self { email, name })
     }
+}
+
+fn generate_subscription_token() -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(25)
+        .collect()
 }
 
 #[tracing::instrument(
@@ -44,12 +53,29 @@ pub async fn subscribe(
         Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-    if insert_subscriber(db, &new_subscriber).await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-    if send_confirmation_email(ses_client, new_subscriber.email, base_url.to_string())
+
+    let subscriber_id = match insert_subscriber(db.clone(), &new_subscriber).await {
+        Ok(subscriber_id) => subscriber_id,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+
+    let subscription_token = generate_subscription_token();
+
+    if store_token(db.clone(), subscriber_id, &subscription_token)
         .await
         .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+
+    if send_confirmation_email(
+        ses_client,
+        new_subscriber.email,
+        &base_url,
+        &subscription_token,
+    )
+    .await
+    .is_err()
     {
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
@@ -64,13 +90,14 @@ pub async fn subscribe(
 pub async fn insert_subscriber(
     db: Arc<Database>,
     new_subscriber: &NewSubscriber,
-) -> Result<(), sqlx::Error> {
+) -> Result<uuid::Uuid, sqlx::Error> {
+    let subscriber_id = uuid::Uuid::new_v4();
     sqlx::query!(
         r#"
           INSERT INTO subscriptions (id, email, name, subscribed_at, status)
           VALUES ($1, $2, $3, $4, 'pending_confirmation')
         "#,
-        uuid::Uuid::new_v4(),
+        subscriber_id,
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
@@ -82,19 +109,21 @@ pub async fn insert_subscriber(
         e
     })?;
 
-    Ok(())
+    Ok(subscriber_id)
 }
 
 pub async fn send_confirmation_email(
     ses_client: Arc<SESWorkflow>,
     recipient_email: SubscriberEmail,
-    base_url: String,
+    base_url: &str,
+    subscription_token: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let confirmation_link = format!(
-        "{}/subscriptions/confirm?subscription_token=mytoken",
-        base_url
+        "{}/subscriptions/confirm?subscription_token={}",
+        base_url, subscription_token
     );
 
+    let subject = "Welcome to our newsletter!";
     let text_content = format!(
         "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
         confirmation_link
@@ -112,8 +141,35 @@ pub async fn send_confirmation_email(
     );
 
     ses_client
-        .send_email(recipient_email, "Welcome!", &text_content, &html_content)
+        .send_email(recipient_email, subject, &text_content, &html_content)
         .await?;
+
+    Ok(())
+}
+
+#[tracing::instrument(
+    name = "Store subscription token in the database",
+    skip(db, subscription_token)
+)]
+pub async fn store_token(
+    db: Arc<Database>,
+    subscriber_id: Uuid,
+    subscription_token: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+          INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+          VALUES ($1, $2)
+        "#,
+        subscription_token,
+        subscriber_id
+    )
+    .execute(&db.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
 
     Ok(())
 }
