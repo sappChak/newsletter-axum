@@ -1,4 +1,8 @@
-use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
+use std::sync::Arc;
+use std::sync::Mutex;
+
+use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
+use aws_sdk_sesv2::Client;
 use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 use axum::Router;
 use once_cell::sync::Lazy;
@@ -10,9 +14,6 @@ use newsletter::routes::router::router;
 use newsletter::ses_workflow::SESWorkflow;
 use newsletter::telemetry::get_subscriber;
 use newsletter::telemetry::init_subscriber;
-
-use std::sync::Arc;
-use std::sync::Mutex;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_span_name = "test".to_string();
@@ -133,8 +134,6 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error:
         configuration.aws.verified_email.clone(),
     ));
     let base_url = Arc::new(configuration.application.base_url.clone());
-
-    tracing::info!("base_url {:?}", base_url);
 
     let router = router(db.clone(), ses.clone(), base_url);
 

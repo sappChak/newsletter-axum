@@ -1,9 +1,5 @@
 use anyhow::anyhow;
-use aws_sdk_sesv2::types::Body;
-use aws_sdk_sesv2::types::Content;
-use aws_sdk_sesv2::types::Destination;
-use aws_sdk_sesv2::types::EmailContent;
-use aws_sdk_sesv2::types::Message;
+use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message};
 use aws_sdk_sesv2::Client;
 
 use crate::domain::SubscriberEmail;
@@ -77,11 +73,9 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use anyhow::Result;
-    use aws_sdk_sesv2::{
-        operation::send_email::{SendEmailError, SendEmailOutput},
-        types::error::MailFromDomainNotVerifiedException,
-        Client,
-    };
+    use aws_sdk_sesv2::operation::send_email::{SendEmailError, SendEmailOutput};
+    use aws_sdk_sesv2::types::error::MailFromDomainNotVerifiedException;
+    use aws_sdk_sesv2::Client;
     use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 
     use crate::{domain::SubscriberEmail, ses_workflow::SESWorkflow};
