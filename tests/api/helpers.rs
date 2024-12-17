@@ -28,6 +28,11 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     }
 });
 
+pub struct ConfirmationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
+}
+
 pub struct TestApp {
     pub db: Arc<Database>,
     pub router: Router,
@@ -35,7 +40,7 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub fn get_confirmation_link(&self) -> String {
+    pub fn get_confirmation_links(&self) -> ConfirmationLinks {
         let content = self
             .captured_request_content
             .lock()
@@ -43,26 +48,23 @@ impl TestApp {
             .clone()
             .unwrap();
 
-        extract_link(&content.0)
-    }
-    pub fn get_confirmation_links(&self) -> (String, String) {
-        let content = self
-            .captured_request_content
-            .lock()
-            .unwrap()
-            .clone()
-            .unwrap();
-
-        (extract_link(&content.0), extract_link(&content.1))
+        ConfirmationLinks {
+            html: extract_link(&content.0),
+            plain_text: extract_link(&content.1),
+        }
     }
 }
 
-pub fn extract_link(s: &str) -> String {
+pub fn extract_link(s: &str) -> reqwest::Url {
     let links: Vec<_> = linkify::LinkFinder::new()
         .links(s)
         .filter(|l| *l.kind() == linkify::LinkKind::Url)
         .collect();
-    links[0].as_str().to_owned()
+    let raw_link = links[0].as_str().to_owned();
+    let confiramation_link = reqwest::Url::parse(&raw_link).unwrap();
+    assert_eq!(confiramation_link.host_str(), Some("127.0.0.1"));
+
+    confiramation_link
 }
 
 pub async fn mock_aws_sesv2_client(
