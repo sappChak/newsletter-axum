@@ -159,3 +159,33 @@ async fn subscribe_sends_a_confirmation_email_with_a_link(pool: PgPool) {
     let confirmation_links = &app.get_confirmation_links();
     assert_eq!(confirmation_links.html, confirmation_links.plain_text);
 }
+
+#[sqlx::test]
+async fn subscribe_fails_if_there_is_a_fatal_database_error(pool: PgPool) {
+    // Arrange
+    let app = spawn_test_app(pool).await.unwrap();
+    let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
+
+    // Act
+    sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token;")
+        .execute(&app.db.pool)
+        .await
+        .expect("Failed to drop subscriptions table.");
+
+    let response = app
+        .router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/subscriptions")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_data))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
