@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{http::StatusCode, response::IntoResponse, Extension, Form};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use sqlx::types::chrono::Utc;
+use sqlx::{types::chrono::Utc, PgPool};
 use uuid::Uuid;
 
 use crate::{
@@ -54,14 +54,14 @@ pub async fn subscribe(
         Err(_) => return StatusCode::BAD_REQUEST,
     };
 
-    let subscriber_id = match insert_subscriber(db.clone(), &new_subscriber).await {
+    let subscriber_id = match insert_subscriber(&db.pool, &new_subscriber).await {
         Ok(subscriber_id) => subscriber_id,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
     };
 
     let subscription_token = generate_subscription_token();
 
-    if store_token(db.clone(), subscriber_id, &subscription_token)
+    if store_token(&db.pool, subscriber_id, &subscription_token)
         .await
         .is_err()
     {
@@ -85,10 +85,10 @@ pub async fn subscribe(
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(db, new_subscriber)
+    skip(pool, new_subscriber)
 )]
 pub async fn insert_subscriber(
-    db: Arc<Database>,
+    pool: &PgPool,
     new_subscriber: &NewSubscriber,
 ) -> Result<uuid::Uuid, sqlx::Error> {
     let subscriber_id = uuid::Uuid::new_v4();
@@ -102,7 +102,7 @@ pub async fn insert_subscriber(
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(&db.pool)
+    .execute(pool)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
@@ -149,10 +149,10 @@ pub async fn send_confirmation_email(
 
 #[tracing::instrument(
     name = "Store subscription token in the database",
-    skip(db, subscription_token)
+    skip(pool, subscription_token)
 )]
 pub async fn store_token(
-    db: Arc<Database>,
+    pool: &PgPool,
     subscriber_id: Uuid,
     subscription_token: &str,
 ) -> Result<(), sqlx::Error> {
@@ -164,7 +164,7 @@ pub async fn store_token(
         subscription_token,
         subscriber_id
     )
-    .execute(&db.pool)
+    .execute(pool)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
