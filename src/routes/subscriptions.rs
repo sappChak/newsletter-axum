@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::Context;
-use axum::body::Body;
-use axum::http::Response;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::{Extension, Form};
+use anyhow::{Context, Result};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Extension, Form, Json,
+};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sqlx::types::chrono::Utc;
-use uuid::Uuid;
 
 use crate::{
     database::db::Database,
@@ -47,11 +46,24 @@ impl std::fmt::Debug for SubscribeError {
 }
 
 impl IntoResponse for SubscribeError {
-    fn into_response(self) -> axum::http::Response<axum::body::Body> {
-        match self {
-            Self::ValidationError(_) => StatusCode::BAD_REQUEST.into_response(),
-            Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    fn into_response(self) -> Response {
+        #[derive(serde::Serialize)]
+        struct Error {
+            message: String,
         }
+
+        let (status, message) = match self {
+            Self::ValidationError(e) => {
+                tracing::error!("Validation error occured: {}", e);
+                (StatusCode::BAD_REQUEST, format!("{}", e))
+            }
+            Self::UnexpectedError(e) => {
+                tracing::error!("Got an unexpected one: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))
+            }
+        };
+
+        (status, Json(Error { message })).into_response()
     }
 }
 
@@ -76,23 +88,28 @@ pub async fn subscribe(
     Extension(ses_client): Extension<Arc<SESWorkflow>>,
     Extension(base_url): Extension<Arc<String>>,
     Form(form): Form<FormData>,
-) -> Result<Response<Body>, SubscribeError> {
+) -> Result<Response, SubscribeError> {
     let new_subscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
 
     let mut transaction = db
         .pool
         .begin()
         .await
-        .context("Failed to start transaction")?;
+        .context("Failed to acquire a Postgres connection from the pool.")?;
 
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
         .await
-        .context("Failed to insert new subscriber")?;
+        .context("Failed to insert new subscriber in the database.")?;
 
     let subscription_token = generate_subscription_token();
     store_token(&mut transaction, subscriber_id, &subscription_token)
         .await
-        .context("Failed to store token")?;
+        .context("Failed to store the confirmation token for a new subscriber.")?;
+
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store a new subscriber.")?;
 
     send_confirmation_email(
         ses_client,
@@ -101,12 +118,7 @@ pub async fn subscribe(
         &subscription_token,
     )
     .await
-    .context("Failed to send confirmation email")?;
-
-    transaction
-        .commit()
-        .await
-        .context("Failed to commit transaction")?;
+    .context("Failed to send a confirmation email.")?;
 
     Ok(StatusCode::OK.into_response())
 }
@@ -131,11 +143,7 @@ pub async fn insert_subscriber(
         Utc::now()
     )
     .execute(&mut **transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
 
     Ok(subscriber_id)
 }
@@ -145,7 +153,7 @@ pub async fn send_confirmation_email(
     recipient_email: SubscriberEmail,
     base_url: &str,
     subscription_token: &str,
-) -> Result<(), anyhow::Error> {
+) -> Result<()> {
     let confirmation_link = format!(
         "{}/subscriptions/confirm?subscription_token={}",
         base_url, subscription_token
@@ -181,7 +189,7 @@ pub async fn send_confirmation_email(
 )]
 pub async fn store_token(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    subscriber_id: Uuid,
+    subscriber_id: uuid::Uuid,
     subscription_token: &str,
 ) -> Result<(), StoreTokenError> {
     sqlx::query!(
