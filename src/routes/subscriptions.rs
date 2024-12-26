@@ -54,12 +54,12 @@ impl IntoResponse for SubscribeError {
 
         let (status, message) = match self {
             Self::ValidationError(e) => {
-                tracing::error!("Validation error occured: {}", e);
-                (StatusCode::BAD_REQUEST, format!("{}", e))
+                tracing::error!("Validation error occured: {:?}", e);
+                (StatusCode::BAD_REQUEST, e.to_string())
             }
             Self::UnexpectedError(e) => {
                 tracing::error!("Got an unexpected one: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))
+                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
             }
         };
 
@@ -120,7 +120,8 @@ pub async fn subscribe(
     .await
     .context("Failed to send a confirmation email.")?;
 
-    Ok(StatusCode::OK.into_response())
+    let response_body = Json(serde_json::json!({ "message": "Check your e-mail box, please" }));
+    Ok((StatusCode::OK, response_body).into_response())
 }
 
 #[tracing::instrument(
