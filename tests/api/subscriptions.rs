@@ -14,18 +14,7 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
-    let response = app
-        .router
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/subscriptions")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::from(form_data))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = app.post("/subscriptions", form_data).await;
 
     // Assert
     assert_eq!(response.status(), StatusCode::OK);
@@ -38,18 +27,7 @@ async fn subscribe_persists_the_new_subscriber(pool: PgPool) {
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
-    let _ = app
-        .router
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/subscriptions")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::from(form_data))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let _response = app.post("/subscriptions", form_data).await;
 
     let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
         .fetch_one(&app.db.pool)
@@ -72,22 +50,9 @@ async fn subscribe_returs_422_for_data_is_missing(pool: PgPool) {
         ("", "missing both name and email"),
     ];
 
-    // Act
     for (form_data, error_message) in test_cases {
-        let response = app
-            .router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/subscriptions")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .body(Body::from(form_data))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
+        // Act
+        let response = app.post("/subscriptions", form_data).await;
         // Assert
         assert_eq!(
             response.status(),
@@ -110,20 +75,7 @@ async fn subscribe_returs_400_when_fields_are_present_but_invalid(pool: PgPool) 
 
     // Act
     for (form_data, error_message) in test_cases {
-        let response = app
-            .router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/subscriptions")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .body(Body::from(form_data))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
+        let response = app.post("/subscriptions", form_data).await;
         // Assert
         assert_eq!(
             response.status(),
@@ -141,19 +93,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link(pool: PgPool) {
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
-    let _response = app
-        .router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/subscriptions")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::from(form_data))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let _response = app.post("/subscriptions", form_data).await;
 
     // Assert
     let confirmation_links = &app.get_confirmation_links();
@@ -171,20 +111,7 @@ async fn subscribe_fails_if_there_is_a_fatal_database_error(pool: PgPool) {
         .execute(&app.db.pool)
         .await
         .expect("Failed to drop subscriptions table.");
-
-    let response = app
-        .router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/subscriptions")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::from(form_data))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = app.post("/subscriptions", form_data).await;
 
     // Assert
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);

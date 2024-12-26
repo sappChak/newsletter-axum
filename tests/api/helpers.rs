@@ -4,10 +4,12 @@ use std::sync::Mutex;
 use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
 use aws_sdk_sesv2::Client;
 use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
-use axum::Router;
+use axum::{body::Body, http::Request, Router};
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
+use tower::ServiceExt;
 
+use axum::response::Response;
 use newsletter::configuration::config::get_configuration;
 use newsletter::database::db::Database;
 use newsletter::routes::router::router;
@@ -53,6 +55,36 @@ impl TestApp {
             html: extract_link(&content.0),
             plain_text: extract_link(&content.1),
         }
+    }
+
+    pub async fn get(&self, uri: &str) -> Response {
+        self.router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(uri)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    pub async fn post(&self, uri: &str, form_data: &'static str) -> Response {
+        self.router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(Body::from(form_data))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
     }
 }
 
@@ -115,7 +147,7 @@ pub async fn mock_aws_sesv2_client(
     mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email])
 }
 
-pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, Box<dyn std::error::Error>> {
+pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, anyhow::Error> {
     Lazy::force(&TRACING);
 
     let configuration = {
