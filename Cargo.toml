@@ -11,7 +11,7 @@ path = "src/main.rs"
 name = "newsletter"
 
 [dependencies]
-axum = "0.7.8"
+axum = { version = "0.7.9", features = ["macros"] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.132"
 serde-aux = "4.5.0"
