@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message};
 use aws_sdk_sesv2::Client;
 
@@ -23,7 +23,7 @@ impl SESWorkflow {
         subject: &str,
         text_content: &str,
         html_content: &str,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<()> {
         let email_content = EmailContent::builder()
             .simple(
                 Message::builder()
@@ -53,7 +53,8 @@ impl SESWorkflow {
 
         match res {
             Ok(output) => {
-                if let Some(_message_id) = output.message_id {
+                if let Some(message_id) = output.message_id {
+                    tracing::info!("Email sent with message_id: {}", message_id);
                     Ok(())
                 } else {
                     Err(anyhow!("Message sent, but no message ID was returned"))

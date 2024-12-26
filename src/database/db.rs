@@ -8,7 +8,7 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn new(options: PgConnectOptions) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(options: PgConnectOptions) -> Result<Self, anyhow::Error> {
         let pool = PgPoolOptions::new().connect_lazy_with(options);
         sqlx::migrate!("./migrations").run(&pool).await?;
         Ok(Self { pool })

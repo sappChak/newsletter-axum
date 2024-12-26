@@ -1,9 +1,9 @@
-use super::environment::Environment;
-
 use config::builder::DefaultState;
 use secrecy::{ExposeSecret, SecretString};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
+
+use super::environment::Environment;
 
 #[derive(serde::Deserialize)]
 pub struct Configuration {

@@ -6,9 +6,9 @@ use crate::configuration::aws_credentials::StaticCredentials;
 use crate::configuration::config::Configuration;
 use crate::telemetry::{get_subscriber, init_subscriber};
 
-pub fn configure_aws(
+pub fn configure_sdk_config(
     configuration: &Configuration,
-) -> Result<aws_config::SdkConfig, Box<dyn std::error::Error>> {
+) -> Result<aws_config::SdkConfig, anyhow::Error> {
     let region = Region::new(configuration.aws.region.clone());
 
     let credentials_provider = SharedCredentialsProvider::new(StaticCredentials::new(
@@ -16,22 +16,20 @@ pub fn configure_aws(
         configuration.aws.secret_access_key.clone(),
     ));
 
-    let shared_config = aws_config::SdkConfig::builder()
+    let sdk_config = aws_config::SdkConfig::builder()
         .region(region)
         .credentials_provider(credentials_provider)
         .build();
 
-    Ok(shared_config)
+    Ok(sdk_config)
 }
 
-pub fn create_aws_client(
-    shared_config: &aws_config::SdkConfig,
-) -> Result<Client, Box<dyn std::error::Error>> {
-    let aws_client = Client::new(shared_config);
+pub fn create_aws_client(sdk_config: &aws_config::SdkConfig) -> Result<Client, anyhow::Error> {
+    let aws_client = Client::new(sdk_config);
     Ok(aws_client)
 }
 
-pub fn init_logging(configuration: &Configuration) -> Result<(), Box<dyn std::error::Error>> {
+pub fn init_logging(configuration: &Configuration) -> Result<(), anyhow::Error> {
     let subscriber = get_subscriber(
         configuration.application.logger_name.clone(),
         configuration.application.default_env_filter.clone(),
@@ -44,7 +42,7 @@ pub fn init_logging(configuration: &Configuration) -> Result<(), Box<dyn std::er
 pub async fn start_server(
     configuration: &Configuration,
     app: axum::Router,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), anyhow::Error> {
     let listener = tokio::net::TcpListener::bind(format!(
         "{}:{}",
         configuration.application.host, configuration.application.port
