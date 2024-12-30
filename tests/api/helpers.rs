@@ -4,7 +4,11 @@ use std::sync::Mutex;
 use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
 use aws_sdk_sesv2::Client;
 use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
-use axum::{body::Body, http::Request, Router};
+use axum::{
+    body::Body,
+    http::{self, Request},
+    Router,
+};
 use once_cell::sync::Lazy;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -16,6 +20,7 @@ use newsletter::routes::router::router;
 use newsletter::ses_workflow::SESWorkflow;
 use newsletter::telemetry::get_subscriber;
 use newsletter::telemetry::init_subscriber;
+use serde_json::to_string;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_span_name = "test".to_string();
@@ -77,10 +82,30 @@ impl TestApp {
             .clone()
             .oneshot(
                 Request::builder()
-                    .method("POST")
+                    .method(http::Method::POST)
                     .uri(uri)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .header(
+                        http::header::CONTENT_TYPE,
+                        "application/x-www-form-urlencoded",
+                    )
                     .body(Body::from(form_data))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    pub async fn post_json(&self, uri: &str, body: impl serde::Serialize) -> Response {
+        let json_body = to_string(&body).expect("Failed to serialize JSON");
+
+        self.router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(uri)
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(json_body))
                     .unwrap(),
             )
             .await
@@ -165,9 +190,9 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, anyhow::Error> {
         aws_client,
         configuration.aws.verified_email.clone(),
     ));
-    let base_url = Arc::new(configuration.application.base_url.clone());
+    let base_url = Arc::new(configuration.application.base_url);
 
-    let router = router(db.clone(), ses.clone(), base_url);
+    let router = router(db.clone(), ses.clone(), base_url.clone());
 
     Ok(TestApp {
         db,
