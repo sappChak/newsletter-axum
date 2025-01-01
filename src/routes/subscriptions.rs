@@ -8,6 +8,7 @@ use axum::{
 };
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sqlx::types::chrono::Utc;
+use uuid::Uuid;
 
 use crate::{
     database::db::Database,
@@ -131,8 +132,8 @@ pub async fn subscribe(
 pub async fn insert_subscriber(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     new_subscriber: &NewSubscriber,
-) -> Result<uuid::Uuid, sqlx::Error> {
-    let subscriber_id = uuid::Uuid::new_v4();
+) -> Result<Uuid, sqlx::Error> {
+    let subscriber_id = Uuid::new_v4();
     sqlx::query!(
         r#"
           INSERT INTO subscriptions (id, email, name, subscribed_at, status)
@@ -178,7 +179,7 @@ pub async fn send_confirmation_email(
     );
 
     ses_client
-        .send_email(recipient_email, subject, &text_content, &html_content)
+        .send_email(&recipient_email, subject, &text_content, &html_content)
         .await?;
 
     Ok(())
@@ -190,7 +191,7 @@ pub async fn send_confirmation_email(
 )]
 pub async fn store_token(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    subscriber_id: uuid::Uuid,
+    subscriber_id: Uuid,
     subscription_token: &str,
 ) -> Result<(), StoreTokenError> {
     sqlx::query!(

@@ -8,6 +8,7 @@ use axum::{
     Extension, Json,
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::database::db::Database;
 
@@ -67,7 +68,7 @@ pub async fn confirm(
 pub async fn get_subscriber_id_from_token(
     pool: &PgPool,
     subscription_token: &str,
-) -> Result<Option<uuid::Uuid>, sqlx::Error> {
+) -> Result<Option<Uuid>, sqlx::Error> {
     let subscriber_id = sqlx::query!(
         r#"
           SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1
@@ -81,14 +82,11 @@ pub async fn get_subscriber_id_from_token(
 }
 
 #[tracing::instrument(name = "Mark subscriber as confirmed", skip(pool))]
-pub async fn confirm_subscriber(
-    pool: &PgPool,
-    subscriber_id: uuid::Uuid,
-) -> Result<(), sqlx::Error> {
+pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
     let _ = sqlx::query!(
         r#"
-      UPDATE subscriptions SET status = 'confirmed' WHERE id = $1
-    "#,
+          UPDATE subscriptions SET status = 'confirmed' WHERE id = $1
+        "#,
         subscriber_id
     )
     .execute(pool)
