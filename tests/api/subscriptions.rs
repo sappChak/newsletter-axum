@@ -1,16 +1,18 @@
-use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-};
-use sqlx::PgPool;
-use tower::util::ServiceExt;
+use std::sync::{Arc, RwLock};
 
-use crate::helpers::spawn_test_app;
+use axum::http::StatusCode;
+use sqlx::PgPool;
+
+use crate::helpers::{
+    get_confirmation_links, mock_aws_sesv2, mock_aws_sesv2_with_request_capture, spawn_test_app,
+};
 
 #[sqlx::test]
 async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let client = mock_aws_sesv2();
+    let app = spawn_test_app(pool, client).await.unwrap();
+
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
@@ -23,7 +25,9 @@ async fn subscribe_returs_200_for_valid_form_data(pool: PgPool) {
 #[sqlx::test]
 async fn subscribe_persists_the_new_subscriber(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let client = mock_aws_sesv2();
+    let app = spawn_test_app(pool, client).await.unwrap();
+
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
@@ -43,7 +47,9 @@ async fn subscribe_persists_the_new_subscriber(pool: PgPool) {
 #[sqlx::test]
 async fn subscribe_returs_422_for_data_is_missing(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let client = mock_aws_sesv2();
+    let app = spawn_test_app(pool, client).await.unwrap();
+
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
@@ -66,15 +72,17 @@ async fn subscribe_returs_422_for_data_is_missing(pool: PgPool) {
 #[sqlx::test]
 async fn subscribe_returs_400_when_fields_are_present_but_invalid(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let client = mock_aws_sesv2();
+    let app = spawn_test_app(pool, client).await.unwrap();
+
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
         ("name=Ursula&email=", "empty email"),
         ("name=Ursula&email=definitely-not-an-email", "invalid email"),
     ];
 
-    // Act
     for (form_data, error_message) in test_cases {
+        // Act
         let response = app.post("/subscriptions", form_data).await;
         // Assert
         assert_eq!(
@@ -89,21 +97,25 @@ async fn subscribe_returs_400_when_fields_are_present_but_invalid(pool: PgPool) 
 #[sqlx::test]
 async fn subscribe_sends_a_confirmation_email_with_a_link(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let captured_request_content = Arc::new(RwLock::new(None));
+    let client = mock_aws_sesv2_with_request_capture(captured_request_content.clone());
+    let app = spawn_test_app(pool, client).await.unwrap();
+
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act
     let _response = app.post("/subscriptions", form_data).await;
 
     // Assert
-    let confirmation_links = &app.get_confirmation_links();
+    let confirmation_links = get_confirmation_links(captured_request_content.clone());
     assert_eq!(confirmation_links.html, confirmation_links.plain_text);
 }
 
 #[sqlx::test]
 async fn subscribe_fails_if_there_is_a_fatal_database_error(pool: PgPool) {
     // Arrange
-    let app = spawn_test_app(pool).await.unwrap();
+    let client = mock_aws_sesv2();
+    let app = spawn_test_app(pool, client).await.unwrap();
     let form_data = "name=Andrii%20Konotop&email=aws.test.receiver@gmail.com";
 
     // Act

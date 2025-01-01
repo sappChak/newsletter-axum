@@ -1,26 +1,27 @@
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, RwLock};
 
-use aws_sdk_sesv2::operation::send_email::SendEmailOutput;
-use aws_sdk_sesv2::Client;
+use aws_sdk_sesv2::{operation::send_email::SendEmailOutput, Client};
 use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 use axum::{
     body::Body,
     http::{self, Request},
+    response::Response,
     Router,
 };
 use once_cell::sync::Lazy;
+use serde_json::to_string;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use axum::response::Response;
-use newsletter::configuration::config::get_configuration;
-use newsletter::database::db::Database;
-use newsletter::routes::router::router;
-use newsletter::ses_workflow::SESWorkflow;
-use newsletter::telemetry::get_subscriber;
-use newsletter::telemetry::init_subscriber;
-use serde_json::to_string;
+use newsletter::{
+    configuration::config::get_configuration,
+    database::db::Database,
+    routes::router::router,
+    ses_workflow::SESWorkflow,
+    telemetry::{get_subscriber, init_subscriber},
+};
+
+pub type CapturedRequestContent = Arc<RwLock<Option<(String, String)>>>;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_span_name = "test".to_string();
@@ -44,32 +45,20 @@ pub struct ConfirmationLinks {
 pub struct TestApp {
     pub db: Arc<Database>,
     pub router: Router,
-    pub captured_request_content: Arc<Mutex<Option<(String, String)>>>,
 }
 
 impl TestApp {
-    pub fn get_confirmation_links(&self) -> ConfirmationLinks {
-        let content = self
-            .captured_request_content
-            .lock()
-            .unwrap()
-            .clone()
-            .unwrap();
-
-        ConfirmationLinks {
-            html: extract_link(&content.0),
-            plain_text: extract_link(&content.1),
-        }
-    }
-
     pub async fn get(&self, uri: &str) -> Response {
         self.router
             .clone()
             .oneshot(
                 Request::builder()
-                    .method("GET")
+                    .method(http::Method::GET)
                     .uri(uri)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .header(
+                        http::header::CONTENT_TYPE,
+                        "application/x-www-form-urlencoded",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -96,8 +85,7 @@ impl TestApp {
     }
 
     pub async fn post_json(&self, uri: &str, body: impl serde::Serialize) -> Response {
-        let json_body = to_string(&body).expect("Failed to serialize JSON");
-
+        let json_body = to_string(&body).expect("Failed to convert serialized JSON to string");
         self.router
             .clone()
             .oneshot(
@@ -113,6 +101,16 @@ impl TestApp {
     }
 }
 
+pub fn get_confirmation_links(
+    captured_request_content: CapturedRequestContent,
+) -> ConfirmationLinks {
+    let content = captured_request_content.read().unwrap().clone().unwrap();
+    ConfirmationLinks {
+        html: extract_link(&content.0),
+        plain_text: extract_link(&content.1),
+    }
+}
+
 pub fn extract_link(s: &str) -> reqwest::Url {
     let links: Vec<_> = linkify::LinkFinder::new()
         .links(s)
@@ -125,8 +123,8 @@ pub fn extract_link(s: &str) -> reqwest::Url {
     confiramation_link
 }
 
-pub async fn mock_aws_sesv2_client(
-    captured_request_content: Arc<Mutex<Option<(String, String)>>>,
+pub fn mock_aws_sesv2_with_request_capture(
+    captured_request_content: CapturedRequestContent,
 ) -> Client {
     let mock_send_email = mock!(Client::send_email)
         .match_requests(move |req| {
@@ -158,7 +156,7 @@ pub async fn mock_aws_sesv2_client(
                     .data()
                     .to_string();
 
-                *captured_request_content.lock().unwrap() = Some((html_body, text_body));
+                *captured_request_content.write().unwrap() = Some((html_body, text_body));
                 true
             } else {
                 false
@@ -169,10 +167,33 @@ pub async fn mock_aws_sesv2_client(
                 .message_id("newsletter-email")
                 .build()
         });
+
+    mock_client!(aws_sdk_sesv2, RuleMode::MatchAny, [&mock_send_email])
+}
+
+pub fn mock_aws_sesv2() -> Client {
+    let mock_send_email = mock!(Client::send_email).then_output(|| {
+        SendEmailOutput::builder()
+            .message_id("newsletter-email")
+            .build()
+    });
     mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email])
 }
 
-pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, anyhow::Error> {
+pub fn mock_aws_sesv2_no_requests() -> Client {
+    let mock_send_email = mock!(Client::send_email)
+        .match_requests(|_| {
+            // Fail the test if any request is made
+            panic!("Unexpected request to AWS SES");
+        })
+        .then_output(|| {
+            // This output will never be used, as the test will fail
+            panic!("This output should never be produced");
+        });
+    mock_client!(aws_sdk_sesv2, RuleMode::Sequential, [&mock_send_email])
+}
+
+pub async fn spawn_test_app(pool: PgPool, client: Client) -> Result<TestApp, anyhow::Error> {
     Lazy::force(&TRACING);
 
     let configuration = {
@@ -181,22 +202,11 @@ pub async fn spawn_test_app(pool: PgPool) -> Result<TestApp, anyhow::Error> {
         c
     };
 
-    let captured_request_content = Arc::new(Mutex::new(None));
-
-    let aws_client = mock_aws_sesv2_client(captured_request_content.clone()).await;
-
     let db = Arc::new(Database { pool });
-    let ses = Arc::new(SESWorkflow::new(
-        aws_client,
-        configuration.aws.verified_email.clone(),
-    ));
+    let ses = Arc::new(SESWorkflow::new(client, configuration.aws.verified_email));
     let base_url = Arc::new(configuration.application.base_url);
 
     let router = router(db.clone(), ses.clone(), base_url.clone());
 
-    Ok(TestApp {
-        db,
-        router,
-        captured_request_content,
-    })
+    Ok(TestApp { db, router })
 }
