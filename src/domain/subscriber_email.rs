@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use validator::ValidateEmail;
 
 #[derive(Debug, Clone)]
@@ -19,12 +20,19 @@ impl SubscriberEmail {
     }
 }
 
+impl std::fmt::Display for SubscriberEmail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Forward to the Display implementation of the wrapped String
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::SubscriberEmail;
     use fake::{faker::internet::en::SafeEmail, Fake};
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
+    use rand::{rngs::StdRng, SeedableRng};
+
+    use super::SubscriberEmail;
 
     #[derive(Debug, Clone)]
     struct ValidEmailFixture(pub String);
