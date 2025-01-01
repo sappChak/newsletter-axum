@@ -1,13 +1,12 @@
-use newsletter::configuration::config::get_configuration;
-use newsletter::database::db::Database;
-use newsletter::routes::router::router;
-use newsletter::ses_workflow::SESWorkflow;
-use newsletter::startup::configure_sdk_config;
-use newsletter::startup::create_aws_client;
-use newsletter::startup::init_logging;
-use newsletter::startup::start_server;
-
 use std::sync::Arc;
+
+use newsletter::{
+    configuration::config::get_configuration,
+    database::db::Database,
+    routes::router::router,
+    ses_workflow::SESWorkflow,
+    startup::{configure_sdk_config, create_aws_client, init_logging, start_server},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {

@@ -1,10 +1,10 @@
 use aws_config::Region;
-use aws_sdk_sesv2::config::SharedCredentialsProvider;
-use aws_sdk_sesv2::Client;
+use aws_sdk_sesv2::{config::SharedCredentialsProvider, Client};
 
-use crate::configuration::aws_credentials::StaticCredentials;
-use crate::configuration::config::Configuration;
-use crate::telemetry::{get_subscriber, init_subscriber};
+use crate::{
+    configuration::{aws_credentials::StaticCredentials, config::Configuration},
+    telemetry::{get_subscriber, init_subscriber},
+};
 
 pub fn configure_sdk_config(
     configuration: &Configuration,
