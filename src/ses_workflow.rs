@@ -1,6 +1,8 @@
-use anyhow::{anyhow, Result};
-use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message};
-use aws_sdk_sesv2::Client;
+use anyhow::anyhow;
+use aws_sdk_sesv2::{
+    types::{Body, Content, Destination, EmailContent, Message},
+    Client,
+};
 
 use crate::domain::SubscriberEmail;
 
@@ -19,11 +21,11 @@ impl SESWorkflow {
 
     pub async fn send_email(
         &self,
-        recipient: SubscriberEmail,
+        recipient: &SubscriberEmail,
         subject: &str,
         text_content: &str,
         html_content: &str,
-    ) -> Result<()> {
+    ) -> Result<(), anyhow::Error> {
         let email_content = EmailContent::builder()
             .simple(
                 Message::builder()
@@ -74,9 +76,11 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use anyhow::Result;
-    use aws_sdk_sesv2::operation::send_email::{SendEmailError, SendEmailOutput};
-    use aws_sdk_sesv2::types::error::MailFromDomainNotVerifiedException;
-    use aws_sdk_sesv2::Client;
+    use aws_sdk_sesv2::{
+        operation::send_email::{SendEmailError, SendEmailOutput},
+        types::error::MailFromDomainNotVerifiedException,
+        Client,
+    };
     use aws_smithy_mocks_experimental::{mock, mock_client, RuleMode};
 
     use crate::{domain::SubscriberEmail, ses_workflow::SESWorkflow};
@@ -104,7 +108,7 @@ mod tests {
 
         let result = ses_workflow
             .send_email(
-                recipient,
+                &recipient,
                 "Test Subject",
                 "<p>Test HTML content</p>",
                 "Test text content",
@@ -138,7 +142,7 @@ mod tests {
 
         let result = ses_workflow
             .send_email(
-                recipient,
+                &recipient,
                 "Test Subject",
                 "<p>Test HTML content</p>",
                 "Test text content",
@@ -210,7 +214,7 @@ mod tests {
 
         let _result = ses_workflow
             .send_email(
-                recipient,
+                &recipient,
                 "Test Subject",
                 "Test text content",
                 "<p>Test HTML content</p>",
