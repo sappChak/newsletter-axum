@@ -10,19 +10,17 @@ use std::sync::Arc;
 
 use super::newsletter::publish_newsletter;
 use crate::{
-    database::db::Database,
     routes::{health_check, subscribe, subscriptions_confirm::confirm},
-    ses_workflow::SESWorkflow,
+    state::AppState,
 };
 
-pub fn router(db: Arc<Database>, client: Arc<SESWorkflow>, base_url: Arc<String>) -> Router {
+pub fn router(state: AppState, base_url: Arc<String>) -> Router {
     Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .route("/newsletters", post(publish_newsletter))
-        .layer(Extension(db))
-        .layer(Extension(client))
+        .with_state(state)
         .layer(Extension(base_url))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {

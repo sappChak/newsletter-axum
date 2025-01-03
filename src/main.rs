@@ -6,6 +6,7 @@ use newsletter::{
     routes::router::router,
     ses_workflow::SESWorkflow,
     startup::{configure_sdk_config, create_aws_client, init_logging, start_server},
+    state::AppState,
 };
 
 #[tokio::main]
@@ -22,9 +23,13 @@ async fn main() -> Result<(), anyhow::Error> {
         configuration.aws.verified_email.clone(),
     ));
     let db = Arc::new(Database::new(configuration.database.with_db()).await?);
+    let state = AppState {
+        db: db.clone(),
+        workflow: ses.clone(),
+    };
     let base_url = Arc::new(configuration.application.base_url.clone());
 
-    let app = router(db, ses, base_url);
+    let app = router(state, base_url);
 
     start_server(&configuration, app).await?;
 

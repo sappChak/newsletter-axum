@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     Extension, Form, Json,
@@ -85,8 +86,8 @@ fn generate_subscription_token() -> String {
     )
 )]
 pub async fn subscribe(
-    Extension(db): Extension<Arc<Database>>,
-    Extension(ses_client): Extension<Arc<SESWorkflow>>,
+    State(db): State<Arc<Database>>,
+    State(ses_client): State<Arc<SESWorkflow>>,
     Extension(base_url): Extension<Arc<String>>,
     Form(form): Form<FormData>,
 ) -> Result<Response, SubscribeError> {

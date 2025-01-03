@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Extension, Json,
+    Json,
 };
 use sqlx::PgPool;
 
@@ -24,8 +25,8 @@ pub struct Content {
 }
 
 pub async fn publish_newsletter(
-    Extension(db): Extension<Arc<Database>>,
-    Extension(ses_client): Extension<Arc<SESWorkflow>>,
+    State(ses_client): State<Arc<SESWorkflow>>,
+    State(db): State<Arc<Database>>,
     Json(payload): Json<NewsletterPayload>,
 ) -> Result<Response, PublishError> {
     let subscribers = get_confirmed_subscribers(&db.pool).await?;

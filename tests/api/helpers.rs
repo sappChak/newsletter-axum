@@ -18,6 +18,7 @@ use newsletter::{
     database::db::Database,
     routes::router::router,
     ses_workflow::SESWorkflow,
+    state::AppState,
     telemetry::{get_subscriber, init_subscriber},
 };
 
@@ -206,7 +207,12 @@ pub async fn spawn_test_app(pool: PgPool, client: Client) -> Result<TestApp, any
     let ses = Arc::new(SESWorkflow::new(client, configuration.aws.verified_email));
     let base_url = Arc::new(configuration.application.base_url);
 
-    let router = router(db.clone(), ses.clone(), base_url.clone());
+    let state = AppState {
+        db: db.clone(),
+        workflow: ses.clone(),
+    };
+
+    let router = router(state, base_url.clone());
 
     Ok(TestApp { db, router })
 }

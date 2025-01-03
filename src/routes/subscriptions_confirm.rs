@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Extension, Json,
+    Json,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -49,7 +49,7 @@ impl IntoResponse for ConfirmationError {
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(parameters, db))]
 pub async fn confirm(
-    Extension(db): Extension<Arc<Database>>,
+    State(db): State<Arc<Database>>,
     Query(parameters): Query<Parameters>,
 ) -> Result<Response, ConfirmationError> {
     let subscriber_id = get_subscriber_id_from_token(&db.pool, &parameters.subscription_token)
