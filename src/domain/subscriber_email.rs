@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use validator::ValidateEmail;
 
 #[derive(Debug, Clone)]
@@ -23,7 +22,7 @@ impl SubscriberEmail {
 impl std::fmt::Display for SubscriberEmail {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Forward to the Display implementation of the wrapped String
-        std::fmt::Display::fmt(&self.0, f)
+        self.0.fmt(f)
     }
 }
 

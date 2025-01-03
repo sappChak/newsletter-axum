@@ -207,12 +207,9 @@ pub async fn spawn_test_app(pool: PgPool, client: Client) -> Result<TestApp, any
     let ses = Arc::new(SESWorkflow::new(client, configuration.aws.verified_email));
     let base_url = Arc::new(configuration.application.base_url);
 
-    let state = AppState {
-        db: db.clone(),
-        workflow: ses.clone(),
-    };
+    let state = AppState::new(db.clone(), ses);
 
-    let router = router(state, base_url.clone());
+    let router = router(state, base_url);
 
     Ok(TestApp { db, router })
 }

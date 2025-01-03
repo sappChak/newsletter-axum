@@ -23,11 +23,9 @@ async fn main() -> Result<(), anyhow::Error> {
         configuration.aws.verified_email.clone(),
     ));
     let db = Arc::new(Database::new(configuration.database.with_db()).await?);
-    let state = AppState {
-        db: db.clone(),
-        workflow: ses.clone(),
-    };
     let base_url = Arc::new(configuration.application.base_url.clone());
+
+    let state = AppState::new(db, ses);
 
     let app = router(state, base_url);
 
